@@ -1,0 +1,38 @@
+{
+    "name": "aerni/cloudflared",
+    "description": "The Laravel companion package for vite-plugin-cloudflared",
+    "homepage": "https://github.com/aerni/laravel-cloudflared",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Michael Aerni",
+            "email": "hello@michaelaerni.ch",
+            "homepage": "https://www.michaelaerni.ch",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "illuminate/support": "^12.0"
+    },
+    "require-dev": {
+        "nunomaduro/collision": "^8.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "Aerni\\Cloudflared\\": "src"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Aerni\\Cloudflared\\CloudflaredServiceProvider"
+            ]
+        }
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "prefer-stable": true,
+    "minimum-stability": "dev"
+}
