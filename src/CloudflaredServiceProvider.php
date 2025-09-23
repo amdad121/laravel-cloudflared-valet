@@ -2,6 +2,8 @@
 
 namespace Aerni\Cloudflared;
 
+use Aerni\Cloudflared\Console\Commands\CloudflaredInstall;
+use Aerni\Cloudflared\Console\Commands\CloudflaredUninstall;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\ServiceProvider;
 
@@ -9,7 +11,7 @@ class CloudflaredServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        if (app()->runningInConsole()) {
+        if ($this->app->runningInConsole()) {
             return;
         }
 
@@ -22,6 +24,16 @@ class CloudflaredServiceProvider extends ServiceProvider
         }
 
         config()->set('app.url', env('CLOUDFLARED_APP_URL'));
+    }
+
+    public function boot(): void
+    {
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                CloudflaredInstall::class,
+                CloudflaredUninstall::class,
+            ]);
+        }
     }
 
     protected function isRunningViteServer(): bool
