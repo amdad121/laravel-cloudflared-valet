@@ -17,6 +17,8 @@ class CloudflaredRun extends Command
 
     public function handle(): void
     {
+        info('Starting cloudflared tunnel.');
+
         $this->createCloudflaredConfig();
         $this->runCloudflared();
     }
@@ -26,11 +28,39 @@ class CloudflaredRun extends Command
         file_put_contents($this->tunnelConfigPath(), $this->cloudflaredConfigContents());
     }
 
+    // TODO: Only show process output if it was requested via a --debug or --logLevel or something like that.
+    // Else, only show errors.
+
     protected function runCloudflared(): void
     {
-        Process::forever()
+        // Set up signal handlers before starting the process
+        pcntl_async_signals(true);
+
+        $process = Process::forever()
             ->tty()
-            ->run("cloudflared tunnel --config {$this->tunnelConfigPath()} run")
-            ->throw();
+            ->start("cloudflared tunnel --config {$this->tunnelConfigPath()} run");
+
+        // Handle multiple termination signals
+        $signalHandler = function ($signal) use ($process) {
+            $process->signal(SIGTERM);
+            $process->wait();
+            $this->info("Stopped cloudflared tunnel.");
+            exit(0);
+        };
+
+        pcntl_signal(SIGINT, $signalHandler);  // Ctrl+C
+        pcntl_signal(SIGTERM, $signalHandler); // Termination signal
+        pcntl_signal(SIGHUP, $signalHandler);  // Hangup signal
+
+        try {
+            $process->wait()->throw();
+        } catch (\Exception $e) {
+            // Ensure process is terminated on any failure
+            if ($process->running()) {
+                $process->signal(SIGTERM);
+                $process->wait();
+            }
+            throw $e;
+        }
     }
 }
