@@ -6,6 +6,7 @@ use Aerni\Cloudflared\Concerns\HasProjectConfig;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
+
 use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\info;
 use function Laravel\Prompts\spin;
@@ -20,6 +21,7 @@ class CloudflaredInstall extends Command
     protected $description = 'Create a Cloudflare Tunnel for this project.';
 
     protected string $hostname;
+
     protected string $tunnelId;
 
     public function handle(): void

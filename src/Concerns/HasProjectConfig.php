@@ -1,4 +1,5 @@
 <?php
+
 namespace Aerni\Cloudflared\Concerns;
 
 use Illuminate\Support\Collection;

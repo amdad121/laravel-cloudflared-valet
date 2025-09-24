@@ -4,8 +4,9 @@ namespace Aerni\Cloudflared\Console\Commands;
 
 use Aerni\Cloudflared\Concerns\HasProjectConfig;
 use Illuminate\Console\Command;
-use function Laravel\Prompts\info;
 use Illuminate\Support\Facades\Process;
+
+use function Laravel\Prompts\info;
 
 class CloudflaredRun extends Command
 {
@@ -44,7 +45,7 @@ class CloudflaredRun extends Command
         $signalHandler = function ($signal) use ($process) {
             $process->signal(SIGTERM);
             $process->wait();
-            $this->info("Stopped cloudflared tunnel.");
+            $this->info('Stopped cloudflared tunnel.');
             exit(0);
         };
 

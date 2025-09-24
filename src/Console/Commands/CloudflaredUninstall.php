@@ -3,13 +3,12 @@
 namespace Aerni\Cloudflared\Console\Commands;
 
 use Aerni\Cloudflared\Concerns\HasProjectConfig;
-use Illuminate\Support\Arr;
 use Illuminate\Console\Command;
-use Symfony\Component\Yaml\Yaml;
-use function Laravel\Prompts\info;
-use function Laravel\Prompts\spin;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
+
+use function Laravel\Prompts\info;
+use function Laravel\Prompts\spin;
 
 class CloudflaredUninstall extends Command
 {
