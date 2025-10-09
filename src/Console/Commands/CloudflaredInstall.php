@@ -2,105 +2,170 @@
 
 namespace Aerni\Cloudflared\Console\Commands;
 
-use Aerni\Cloudflared\Concerns\HasProjectConfig;
+use Aerni\Cloudflared\CloudflaredConfig;
 use Aerni\Cloudflared\Concerns\InteractsWithHerd;
+use Aerni\Cloudflared\Concerns\InteractsWithTunnel;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
-
-use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\info;
+use function Laravel\Prompts\select;
 use function Laravel\Prompts\spin;
 use function Laravel\Prompts\text;
+use function Laravel\Prompts\warning;
 
 class CloudflaredInstall extends Command
 {
-    use HasProjectConfig, InteractsWithHerd;
+    use InteractsWithHerd, InteractsWithTunnel;
 
     protected $signature = 'cloudflared:install';
 
     protected $description = 'Create a Cloudflare Tunnel for this project.';
 
-    protected string $hostname;
+    protected CloudflaredConfig $cloudflaredConfig;
 
-    protected string $tunnelId;
-
-    public function handle(): void
+    public function handle()
     {
-        if (File::exists($this->projectConfigPath())) {
-            $this->fail('Cloudflared is already installed for this project.');
+        if (Process::run('cloudflared --version')->failed()) {
+            $this->fail('cloudflared not found in PATH.');
         }
 
-        $this->hostname = text(
-            label: 'What hostname do you want to associate with this tunnel?',
-            placeholder: "{$this->herdSiteName()}.domain.com",
-            hint: 'It is recommended to match the subdomain to your Laravel Herd site.',
-            validate: fn (string $value) => match (true) {
-                empty($value) => 'The hostname field is required.',
-                count(array_filter(explode('.', $value))) < 3 => "The hostname must include a subdomain (e.g., {$this->herdSiteName()}.domain.com).",
-                default => null,
-            },
+        if (Process::run('herd --version')->failed()) {
+            $this->fail('Laravel Herd not found in PATH.');
+        }
+
+        $this->createCloudflaredTunnel($this->askForHostname());
+        $this->createAppDnsRecord();
+        $this->createViteDnsRecord();
+        $this->createHerdLink($this->cloudflaredConfig->hostname);
+        $this->createCloudflaredProjectFile();
+    }
+
+    protected function createCloudflaredTunnel(string $name): void
+    {
+        $tunnelInfo = spin(
+            callback: fn () => Process::run("cloudflared tunnel info {$name}"),
+            message: "Verifying that there is no existing tunnel for {$name}."
         );
 
-        $continue = confirm(
-            label: "Do you want to overwrite potentially existing DNS records for \"{$this->hostname}\" and \"vite-{$this->hostname}\"?",
-            yes: 'Yes, continue',
-            no: 'No, abort',
-            hint: 'The terms must be accepted to continue.'
-        );
-
-        if (! $continue) {
+        if ($tunnelInfo->successful()) {
+            $this->handleExistingTunnel($name);
             return;
         }
 
-        $this->createCloudflaredTunnel();
-        $this->createCloudflaredFile();
-        $this->createAppDnsRecord();
-        $this->createViteDnsRecord();
-        $this->createHerdLink($this->hostname);
-    }
-
-    protected function createCloudflaredTunnel(): void
-    {
         $result = spin(
-            callback: fn () => Process::run("cloudflared tunnel create {$this->hostname}")->throw(),
-            message: "Creating tunnel: {$this->hostname}"
+            callback: fn () => Process::run("cloudflared tunnel create {$name}"),
+            message: "Creating tunnel"
         );
+
+        $result->throw();
 
         if (! preg_match('/Created tunnel .+ with id ([a-f0-9\-]+)/', $result->output(), $tunnelMatch)) {
             $this->fail('Unable to extract the tunnel ID.');
         }
 
-        $this->tunnelId = $tunnelMatch[1];
-
-        info("<info>[✔]</info> Created tunnel: {$this->hostname}");
-    }
-
-    protected function createCloudflaredFile(): void
-    {
-        File::put('.cloudflared.yaml', <<<YAML
-tunnel: {$this->tunnelId}
-hostname: {$this->hostname}
-YAML);
-    }
-
-    protected function createDnsRecord(string $name): void
-    {
-        spin(
-            callback: fn () => Process::run("cloudflared tunnel route dns --overwrite-dns {$this->hostname} {$name}")->throw(),
-            message: "Creating DNS record: {$name}"
+        $this->cloudflaredConfig = new CloudflaredConfig(
+            tunnel: $tunnelMatch[1],
+            hostname: $name,
         );
 
-        info("<info>[✔]</info> Created DNS record: {$name}");
+        info("<info>[✔]</info> Created tunnel");
+    }
+
+    protected function handleExistingTunnel(string $name): void
+    {
+        warning("A tunnel for {$name} already exists.");
+
+        $selection = select(
+            label: 'How do you want to proceed?',
+            options: ['Choose a different hostname', 'Delete existing tunnel and continue']
+        );
+
+        if ($selection === 'Choose a different hostname') {
+            $this->createCloudflaredTunnel($this->askForHostname());
+            return;
+        }
+
+        $this->deleteCloudflaredTunnel($name);
+        $this->createCloudflaredTunnel($name);
     }
 
     protected function createAppDnsRecord(): void
     {
-        $this->createDnsRecord($this->hostname);
+        $this->createDnsRecord($this->cloudflaredConfig->hostname);
     }
 
     protected function createViteDnsRecord(): void
     {
-        $this->createDnsRecord("vite-{$this->hostname}");
+        $this->createDnsRecord("vite-{$this->cloudflaredConfig->hostname}");
     }
+
+    protected function createDnsRecord(string $name, bool $overwrite = false): void
+    {
+        $command = $overwrite
+            ? "cloudflared tunnel route dns --overwrite-dns {$this->cloudflaredConfig->tunnel} {$name}"
+            : "cloudflared tunnel route dns {$this->cloudflaredConfig->tunnel} {$name}";
+
+        $result = spin(
+            callback: fn () => Process::run($command),
+            message: "Creating DNS record: {$name}"
+        );
+
+        if ($result->seeInErrorOutput('Failed to add route: code: 1003')) {
+            $this->handleExistingDnsRecord($name);
+            return;
+        }
+
+        $result->throw();
+
+        info("<info>[✔]</info> Created DNS record: {$name}");
+    }
+
+    protected function handleExistingDnsRecord(string $name): void
+    {
+        warning("A DNS record for {$name} already exists.");
+
+        $selection = select(
+            label: 'How do you want to proceed?',
+            options: ['Choose a different hostname', 'Overwrite existing record and continue', 'Abort and delete the tunnel']
+        );
+
+        if ($selection === 'Choose a different hostname') {
+            $this->deleteCloudflaredTunnel($this->cloudflaredConfig->hostname);
+            $this->handle();
+            return;
+        }
+
+        if ($selection === 'Overwrite existing record and continue') {
+            $this->createDnsRecord(name: $name, overwrite: true);
+            return;
+        }
+
+        $this->deleteCloudflaredTunnel($this->cloudflaredConfig->hostname);
+        exit(1);
+    }
+
+    protected function createCloudflaredProjectFile(): void
+    {
+        $this->cloudflaredConfig->save();
+
+        info('<info>[✔]</info> Created cloudflared project file: .cloudflared.yaml');
+    }
+
+    protected function askForHostname(): string
+    {
+        return text(
+            label: 'The hostname you want to connect to this tunnel.',
+            placeholder: "{$this->herdSiteName()}.domain.com",
+            hint: "Use a subdomain that matches the name of this site (e.g., {$this->herdSiteName()}.domain.com).",
+            validate: fn (string $value) => match (true) {
+                empty($value) => 'The hostname field is required.',
+                count(array_filter(explode('.', $value))) < 3 => "The hostname must be a subdomain (e.g., {$this->herdSiteName()}.domain.com).",
+                default => null,
+            },
+        );
+    }
+
+    // TODO: Handle exit handlers in case users abort the command midway.
+    // - delete tunnels that were created.
+    // - delete .cloudflared.yaml file.
 }
