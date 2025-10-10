@@ -2,55 +2,42 @@
 
 namespace Aerni\Cloudflared;
 
-use Illuminate\Support\Str;
+use Symfony\Component\Yaml\Yaml;
+use Illuminate\Support\Facades\File;
 
 class ProjectConfig
 {
-    public function __construct(protected CloudflaredConfig $config)
-    {
-        //
+    public function __construct(
+        public readonly string $tunnel,
+        public readonly string $hostname
+    ) {
     }
 
-    public function path(): string
+    public static function make(string $tunnel, string $hostname): static
     {
-        return $this->config->path();
+        return new static($tunnel, $hostname);
     }
 
-    public function tunnel(): string
+    public static function load(): static
     {
-        return $this->config->tunnel;
+        return new static(...Yaml::parseFile(static::path()));
     }
 
-    public function hostname(): string
+    public function save(): void
     {
-        return $this->config->hostname;
+        File::put(static::path(), <<<YAML
+tunnel: {$this->tunnel}
+hostname: {$this->hostname}
+YAML);
     }
 
-    public function service(): string
+    public function delete(): void
     {
-        return config('app.url');
+        File::delete(static::path());
     }
 
-    public function url(): string
+    public static function path(): string
     {
-        return parse_url(config('app.url'), PHP_URL_SCHEME).'://'.$this->hostname();
-    }
-
-    public function tunnelCredentialsPath(): string
-    {
-        return $this->assemble(getenv('HOME'), '.cloudflared', "{$this->tunnel()}.json");
-    }
-
-    public function tunnelConfigPath(): string
-    {
-        return $this->assemble(getenv('HOME'), '.cloudflared', "{$this->tunnel()}.yaml");
-    }
-
-    protected function assemble(string ...$parts): string
-    {
-        return Str::of(implode('/', $parts))
-            ->replace('\\', '/')
-            ->replace('//', '/')
-            ->toString();
+        return base_path('.cloudflared.yaml');
     }
 }

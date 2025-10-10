@@ -4,40 +4,41 @@ namespace Aerni\Cloudflared\Console\Commands;
 
 use Illuminate\Console\Command;
 use function Laravel\Prompts\info;
+use Aerni\Cloudflared\TunnelConfig;
 use Aerni\Cloudflared\ProjectConfig;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
-
-use Aerni\Cloudflared\Concerns\HasProjectConfig;
+use Aerni\Cloudflared\Facades\Cloudflared;
 use Aerni\Cloudflared\Concerns\InteractsWithHerd;
 
 class CloudflaredStart extends Command
 {
-    use HasProjectConfig, InteractsWithHerd;
+    use InteractsWithHerd;
 
     protected $signature = 'cloudflared:start';
 
     protected $description = 'Run the Cloudflare Tunnel of this project.';
 
-    public function __construct(protected ProjectConfig $config)
-    {
-        parent::__construct();
-    }
+    protected ProjectConfig $projectConfig;
+
+    protected TunnelConfig $tunnelConfig;
 
     public function handle(): void
     {
-        if (! File::exists($this->config->path())) {
-            $this->fail("Missing file <info>.cloudflared.yaml</info>. There is nothing to uninstall.");
+        if (! Cloudflared::isInstalled()) {
+            $this->fail("Missing file <info>.cloudflared.yaml</info>. Run <info>php artisan cloudflared:install</info> first.");
         }
 
-        $this->createCloudflaredConfig();
-        $this->createHerdLink($this->hostname());
+        $this->projectConfig = ProjectConfig::load();
+        $this->tunnelConfig = TunnelConfig::make($this->projectConfig);
+
+        $this->createCloudflaredTunnelConfig();
+        $this->createHerdLink($this->projectConfig->hostname);
         $this->runCloudflared();
     }
 
-    protected function createCloudflaredConfig(): void
+    protected function createCloudflaredTunnelConfig(): void
     {
-        file_put_contents($this->tunnelConfigPath(), $this->cloudflaredConfigContents());
+        $this->tunnelConfig->save();
     }
 
     // TODO: Only show process output if it was requested via a --debug or --logLevel or something like that.
@@ -52,12 +53,24 @@ class CloudflaredStart extends Command
 
         $process = Process::forever()
             ->tty()
-            ->start("cloudflared tunnel --config {$this->tunnelConfigPath()} run");
+            ->start("cloudflared tunnel --config {$this->tunnelConfig->path()} run");
+
+        // Track if we're already shutting down to prevent duplicate signal handling
+        $shuttingDown = false;
 
         // Handle multiple termination signals
-        $signalHandler = function ($signal) use ($process) {
-            $process->signal(SIGTERM);
-            $process->wait();
+        $signalHandler = function ($signal) use ($process, &$shuttingDown) {
+            if ($shuttingDown) {
+                return;
+            }
+
+            $shuttingDown = true;
+
+            if ($process->running()) {
+                $process->signal(SIGTERM);
+                $process->wait();
+            }
+
             $this->cleanupCloudflaredProcess();
             exit(0);
         };
@@ -67,13 +80,23 @@ class CloudflaredStart extends Command
         pcntl_signal(SIGHUP, $signalHandler);  // Hangup signal
 
         try {
-            $process->wait()->throw();
+            $process->wait();
+
+            // If process exited normally or was terminated by our signal handler, clean up
+            if (!$shuttingDown) {
+                $this->cleanupCloudflaredProcess();
+            }
         } catch (\Exception $e) {
             // Ensure process is terminated on any failure
-            if ($process->running()) {
+            if ($process->running() && !$shuttingDown) {
                 $process->signal(SIGTERM);
                 $process->wait();
             }
+
+            if (!$shuttingDown) {
+                $this->cleanupCloudflaredProcess();
+            }
+
             throw $e;
         }
     }
@@ -82,8 +105,6 @@ class CloudflaredStart extends Command
     {
         info('<info>[✔]</info> Stopped tunnel');
 
-        File::delete($this->tunnelConfigPath());
-
-        $this->deleteHerdLink($this->hostname());
+        $this->tunnelConfig->delete();
     }
 }

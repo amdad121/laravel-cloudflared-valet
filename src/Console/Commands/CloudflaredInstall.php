@@ -2,16 +2,17 @@
 
 namespace Aerni\Cloudflared\Console\Commands;
 
-use Aerni\Cloudflared\CloudflaredConfig;
-use Aerni\Cloudflared\Concerns\InteractsWithHerd;
-use Aerni\Cloudflared\Concerns\InteractsWithTunnel;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Process;
 use function Laravel\Prompts\info;
-use function Laravel\Prompts\select;
 use function Laravel\Prompts\spin;
 use function Laravel\Prompts\text;
+use function Laravel\Prompts\select;
 use function Laravel\Prompts\warning;
+use Illuminate\Support\Facades\Process;
+use Aerni\Cloudflared\ProjectConfig;
+use Aerni\Cloudflared\Facades\Cloudflared;
+use Aerni\Cloudflared\Concerns\InteractsWithHerd;
+use Aerni\Cloudflared\Concerns\InteractsWithTunnel;
 
 class CloudflaredInstall extends Command
 {
@@ -21,7 +22,7 @@ class CloudflaredInstall extends Command
 
     protected $description = 'Create a Cloudflare Tunnel for this project.';
 
-    protected CloudflaredConfig $cloudflaredConfig;
+    protected ProjectConfig $projectConfig;
 
     public function handle()
     {
@@ -36,8 +37,8 @@ class CloudflaredInstall extends Command
         $this->createCloudflaredTunnel($this->askForHostname());
         $this->createAppDnsRecord();
         $this->createViteDnsRecord();
-        $this->createHerdLink($this->cloudflaredConfig->hostname);
-        $this->createCloudflaredProjectFile();
+        $this->createHerdLink($this->projectConfig->hostname);
+        $this->saveProjectConfig();
     }
 
     protected function createCloudflaredTunnel(string $name): void
@@ -63,10 +64,7 @@ class CloudflaredInstall extends Command
             $this->fail('Unable to extract the tunnel ID.');
         }
 
-        $this->cloudflaredConfig = new CloudflaredConfig(
-            tunnel: $tunnelMatch[1],
-            hostname: $name,
-        );
+        $this->projectConfig = ProjectConfig::make(tunnel: $tunnelMatch[1], hostname: $name);
 
         info("<info>[✔]</info> Created tunnel");
     }
@@ -91,19 +89,19 @@ class CloudflaredInstall extends Command
 
     protected function createAppDnsRecord(): void
     {
-        $this->createDnsRecord($this->cloudflaredConfig->hostname);
+        $this->createDnsRecord($this->projectConfig->hostname);
     }
 
     protected function createViteDnsRecord(): void
     {
-        $this->createDnsRecord("vite-{$this->cloudflaredConfig->hostname}");
+        $this->createDnsRecord("vite-{$this->projectConfig->hostname}");
     }
 
     protected function createDnsRecord(string $name, bool $overwrite = false): void
     {
         $command = $overwrite
-            ? "cloudflared tunnel route dns --overwrite-dns {$this->cloudflaredConfig->tunnel} {$name}"
-            : "cloudflared tunnel route dns {$this->cloudflaredConfig->tunnel} {$name}";
+            ? "cloudflared tunnel route dns --overwrite-dns {$this->projectConfig->tunnel} {$name}"
+            : "cloudflared tunnel route dns {$this->projectConfig->tunnel} {$name}";
 
         $result = spin(
             callback: fn () => Process::run($command),
@@ -130,7 +128,7 @@ class CloudflaredInstall extends Command
         );
 
         if ($selection === 'Choose a different hostname') {
-            $this->deleteCloudflaredTunnel($this->cloudflaredConfig->hostname);
+            $this->deleteCloudflaredTunnel($this->projectConfig->hostname);
             $this->handle();
             return;
         }
@@ -140,13 +138,13 @@ class CloudflaredInstall extends Command
             return;
         }
 
-        $this->deleteCloudflaredTunnel($this->cloudflaredConfig->hostname);
+        $this->deleteCloudflaredTunnel($this->projectConfig->hostname);
         exit(1);
     }
 
-    protected function createCloudflaredProjectFile(): void
+    protected function saveProjectConfig(): void
     {
-        $this->cloudflaredConfig->save();
+        $this->projectConfig->save();
 
         info('<info>[✔]</info> Created cloudflared project file: .cloudflared.yaml');
     }
