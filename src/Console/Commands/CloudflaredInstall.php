@@ -146,7 +146,7 @@ class CloudflaredInstall extends Command
     {
         $this->projectConfig->save();
 
-        info('<info>[✔]</info> Created cloudflared project file: .cloudflared.yaml');
+        info('<info>[✔]</info> Created project file: .cloudflared.yaml');
     }
 
     protected function askForHostname(): string

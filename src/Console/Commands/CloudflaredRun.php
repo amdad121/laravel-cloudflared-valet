@@ -5,7 +5,6 @@ namespace Aerni\Cloudflared\Console\Commands;
 use Illuminate\Console\Command;
 use function Laravel\Prompts\info;
 use Aerni\Cloudflared\TunnelConfig;
-use Aerni\Cloudflared\ProjectConfig;
 use Illuminate\Support\Facades\Process;
 use Aerni\Cloudflared\Facades\Cloudflared;
 use Aerni\Cloudflared\Concerns\InteractsWithHerd;
@@ -18,8 +17,6 @@ class CloudflaredRun extends Command
 
     protected $description = 'Run the Cloudflare Tunnel of this project.';
 
-    protected ProjectConfig $projectConfig;
-
     protected TunnelConfig $tunnelConfig;
 
     public function handle(): void
@@ -28,11 +25,10 @@ class CloudflaredRun extends Command
             $this->fail("Missing file <info>.cloudflared.yaml</info>. Run <info>php artisan cloudflared:install</info> first.");
         }
 
-        $this->projectConfig = Cloudflared::projectConfig();
         $this->tunnelConfig = Cloudflared::tunnelConfig();
 
         $this->createCloudflaredTunnelConfig();
-        $this->createHerdLink($this->projectConfig->hostname);
+        $this->createHerdLink($this->tunnelConfig->hostname());
         $this->runCloudflared();
     }
 
