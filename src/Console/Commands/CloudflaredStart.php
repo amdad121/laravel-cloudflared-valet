@@ -28,8 +28,8 @@ class CloudflaredStart extends Command
             $this->fail("Missing file <info>.cloudflared.yaml</info>. Run <info>php artisan cloudflared:install</info> first.");
         }
 
-        $this->projectConfig = ProjectConfig::load();
-        $this->tunnelConfig = TunnelConfig::make($this->projectConfig);
+        $this->projectConfig = Cloudflared::projectConfig();
+        $this->tunnelConfig = Cloudflared::tunnelConfig();
 
         $this->createCloudflaredTunnelConfig();
         $this->createHerdLink($this->projectConfig->hostname);

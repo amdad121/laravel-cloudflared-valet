@@ -7,7 +7,7 @@ use function Laravel\Prompts\info;
 
 trait InteractsWithHerd
 {
-    protected function createHerdLink(string $hostname)
+    protected function createHerdLink(string $hostname): void
     {
         Process::run("herd link {$hostname}")->throw();
 

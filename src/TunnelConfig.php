@@ -14,19 +14,14 @@ class TunnelConfig
         //
     }
 
-    public static function make(ProjectConfig $projectConfig): static
-    {
-        return new static($projectConfig);
-    }
-
     public function save(): void
     {
         File::put($this->path(), <<<YAML
-tunnel: {$this->projectConfig->tunnel}
+tunnel: {$this->tunnel()}
 credentials-file: {$this->credentialsPath()}
 
 ingress:
-  - hostname: {$this->projectConfig->hostname}
+  - hostname: {$this->hostname()}
     service: {$this->service()}
   - service: http_status:404
 YAML);
@@ -37,6 +32,16 @@ YAML);
         File::delete($this->path());
     }
 
+    public function hostname(): string
+    {
+        return $this->projectConfig->hostname;
+    }
+
+    public function tunnel(): string
+    {
+        return $this->projectConfig->tunnel;
+    }
+
     public function service(): string
     {
         return config('app.url');
@@ -44,16 +49,16 @@ YAML);
 
     public function url(): string
     {
-        return parse_url($this->service(), PHP_URL_SCHEME).'://'.$this->projectConfig->hostname;
-    }
-
-    public function credentialsPath(): string
-    {
-        return $this->assemble(getenv('HOME'), '.cloudflared', "{$this->projectConfig->tunnel}.json");
+        return parse_url($this->service(), PHP_URL_SCHEME).'://'.$this->hostname();
     }
 
     public function path(): string
     {
-        return $this->assemble(getenv('HOME'), '.cloudflared', "{$this->projectConfig->tunnel}.yaml");
+        return $this->assemble(getenv('HOME'), '.cloudflared', "{$this->tunnel()}.yaml");
+    }
+
+    public function credentialsPath(): string
+    {
+        return $this->assemble(getenv('HOME'), '.cloudflared', "{$this->tunnel()}.json");
     }
 }

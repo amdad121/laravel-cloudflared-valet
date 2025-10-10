@@ -25,7 +25,7 @@ class CloudflaredUninstall extends Command
             $this->fail("Missing file <info>.cloudflared.yaml</info>. There is nothing to uninstall.");
         }
 
-        $this->projectConfig = ProjectConfig::load();
+        $this->projectConfig = Cloudflared::projectConfig();
 
         $this->deleteCloudflaredTunnel($this->projectConfig->hostname);
         $this->deleteHerdLink($this->projectConfig->hostname);
@@ -35,7 +35,7 @@ class CloudflaredUninstall extends Command
 
     protected function deleteProjectConfigs(): void
     {
-        TunnelConfig::make($this->projectConfig)->delete();
+        Cloudflared::tunnelConfig()->delete();
 
         $this->projectConfig->delete();
 

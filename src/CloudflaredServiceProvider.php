@@ -16,12 +16,11 @@ class CloudflaredServiceProvider extends ServiceProvider
             return;
         }
 
-        $projectConfig = ProjectConfig::load();
-        $tunnelConfig = TunnelConfig::make($projectConfig);
-
-        if (request()->host() === $projectConfig->hostname) {
-            config()->set('app.url', $tunnelConfig->url());
+        if (request()->host() !== Cloudflared::tunnelConfig()->hostname()) {
+            return;
         }
+
+        config()->set('app.url', Cloudflared::tunnelConfig()->url());
     }
 
     public function boot(): void

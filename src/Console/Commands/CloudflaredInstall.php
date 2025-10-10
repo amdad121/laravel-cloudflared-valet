@@ -64,7 +64,7 @@ class CloudflaredInstall extends Command
             $this->fail('Unable to extract the tunnel ID.');
         }
 
-        $this->projectConfig = ProjectConfig::make(tunnel: $tunnelMatch[1], hostname: $name);
+        $this->projectConfig = Cloudflared::makeProjectConfig(tunnel: $tunnelMatch[1], hostname: $name);
 
         info("<info>[✔]</info> Created tunnel");
     }
