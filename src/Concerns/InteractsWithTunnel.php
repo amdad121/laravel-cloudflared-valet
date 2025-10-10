@@ -2,9 +2,9 @@
 
 namespace Aerni\Cloudflared\Concerns;
 
+use Illuminate\Support\Facades\Process;
 use function Laravel\Prompts\info;
 use function Laravel\Prompts\spin;
-use Illuminate\Support\Facades\Process;
 
 trait InteractsWithTunnel
 {
@@ -15,6 +15,6 @@ trait InteractsWithTunnel
             message: "Deleting tunnel: {$name}"
         );
 
-        info("<info>[✔]</info> Deleted tunnel: {$name}");
+        info(' ✔ Deleted tunnel.');
     }
 }

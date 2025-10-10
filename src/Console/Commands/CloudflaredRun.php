@@ -22,7 +22,7 @@ class CloudflaredRun extends Command
     public function handle(): void
     {
         if (! Cloudflared::isInstalled()) {
-            $this->fail("Missing file <info>.cloudflared.yaml</info>. Run <info>php artisan cloudflared:install</info> first.");
+            $this->fail("Missing project file <info>.cloudflared.yaml</info>. Run <info>php artisan cloudflared:install</info> first.");
         }
 
         $this->tunnelConfig = Cloudflared::tunnelConfig();
@@ -42,7 +42,7 @@ class CloudflaredRun extends Command
 
     protected function runCloudflared(): void
     {
-        info('<info>[✔]</info> Started tunnel');
+        info(' ✔ Started tunnel.');
 
         // Set up signal handlers before starting the process
         pcntl_async_signals(true);
@@ -99,7 +99,7 @@ class CloudflaredRun extends Command
 
     protected function cleanupCloudflaredProcess(): void
     {
-        info('<info>[✔]</info> Stopped tunnel');
+        info(' ✔ Stopped tunnel.');
 
         $this->tunnelConfig->delete();
     }

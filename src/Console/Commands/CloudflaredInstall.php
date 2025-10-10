@@ -2,17 +2,17 @@
 
 namespace Aerni\Cloudflared\Console\Commands;
 
-use Illuminate\Console\Command;
-use function Laravel\Prompts\info;
-use function Laravel\Prompts\spin;
-use function Laravel\Prompts\text;
-use function Laravel\Prompts\select;
-use function Laravel\Prompts\warning;
-use Illuminate\Support\Facades\Process;
-use Aerni\Cloudflared\ProjectConfig;
-use Aerni\Cloudflared\Facades\Cloudflared;
 use Aerni\Cloudflared\Concerns\InteractsWithHerd;
 use Aerni\Cloudflared\Concerns\InteractsWithTunnel;
+use Aerni\Cloudflared\Facades\Cloudflared;
+use Aerni\Cloudflared\ProjectConfig;
+use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Process;
+use function Laravel\Prompts\info;
+use function Laravel\Prompts\select;
+use function Laravel\Prompts\spin;
+use function Laravel\Prompts\text;
+use function Laravel\Prompts\warning;
 
 class CloudflaredInstall extends Command
 {
@@ -50,12 +50,13 @@ class CloudflaredInstall extends Command
 
         if ($tunnelInfo->successful()) {
             $this->handleExistingTunnel($name);
+
             return;
         }
 
         $result = spin(
             callback: fn () => Process::run("cloudflared tunnel create {$name}"),
-            message: "Creating tunnel"
+            message: 'Creating tunnel'
         );
 
         $result->throw();
@@ -66,12 +67,12 @@ class CloudflaredInstall extends Command
 
         $this->projectConfig = Cloudflared::makeProjectConfig(tunnel: $tunnelMatch[1], hostname: $name);
 
-        info("<info>[✔]</info> Created tunnel");
+        info(' ✔ Created tunnel.');
     }
 
     protected function handleExistingTunnel(string $name): void
     {
-        warning("A tunnel for {$name} already exists.");
+        warning(" ⚠ Tunnel for {$name} already exists.");
 
         $selection = select(
             label: 'How do you want to proceed?',
@@ -80,6 +81,7 @@ class CloudflaredInstall extends Command
 
         if ($selection === 'Choose a different hostname') {
             $this->createCloudflaredTunnel($this->askForHostname());
+
             return;
         }
 
@@ -110,17 +112,18 @@ class CloudflaredInstall extends Command
 
         if ($result->seeInErrorOutput('Failed to add route: code: 1003')) {
             $this->handleExistingDnsRecord($name);
+
             return;
         }
 
         $result->throw();
 
-        info("<info>[✔]</info> Created DNS record: {$name}");
+        info(" ✔ Created DNS record: {$name}");
     }
 
     protected function handleExistingDnsRecord(string $name): void
     {
-        warning("A DNS record for {$name} already exists.");
+        warning(" ⚠ A DNS record for {$name} already exists.");
 
         $selection = select(
             label: 'How do you want to proceed?',
@@ -130,11 +133,13 @@ class CloudflaredInstall extends Command
         if ($selection === 'Choose a different hostname') {
             $this->deleteCloudflaredTunnel($this->projectConfig->hostname);
             $this->handle();
+
             return;
         }
 
         if ($selection === 'Overwrite existing record and continue') {
             $this->createDnsRecord(name: $name, overwrite: true);
+
             return;
         }
 
@@ -146,7 +151,7 @@ class CloudflaredInstall extends Command
     {
         $this->projectConfig->save();
 
-        info('<info>[✔]</info> Created project file: .cloudflared.yaml');
+        info(' ✔ Created project file.');
     }
 
     protected function askForHostname(): string

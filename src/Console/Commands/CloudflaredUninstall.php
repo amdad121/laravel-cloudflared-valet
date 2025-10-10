@@ -11,6 +11,7 @@ use Aerni\Cloudflared\TunnelConfig;
 use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\error;
 use function Laravel\Prompts\info;
+use function Laravel\Prompts\note;
 
 class CloudflaredUninstall extends Command
 {
@@ -25,7 +26,7 @@ class CloudflaredUninstall extends Command
     public function handle(): void
     {
         if (! Cloudflared::isInstalled()) {
-            $this->fail("Missing file <info>.cloudflared.yaml</info>. There is nothing to uninstall.");
+            $this->fail("Missing project file <info>.cloudflared.yaml</info>. There is nothing to uninstall.");
         }
 
         $this->tunnelConfig = Cloudflared::tunnelConfig();
@@ -52,6 +53,6 @@ class CloudflaredUninstall extends Command
         $this->tunnelConfig->delete();
         $this->tunnelConfig->projectConfig->delete();
 
-        info("<info>[✔]</info> Deleted tunnel configs");
+        info(' ✔ Deleted tunnel configs.');
     }
 }

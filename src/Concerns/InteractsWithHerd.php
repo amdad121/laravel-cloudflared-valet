@@ -11,14 +11,14 @@ trait InteractsWithHerd
     {
         Process::run("herd link {$hostname}")->throw();
 
-        info("<info>[✔]</info> Created Herd link: {$hostname}");
+        info(' ✔ Created Herd link.');
     }
 
     protected function deleteHerdLink(string $hostname): void
     {
         Process::run("herd unlink {$hostname}")->throw();
 
-        info("<info>[✔]</info> Deleted Herd link: {$hostname}");
+        info(' ✔ Deleted Herd link.');
     }
 
     protected function herdSiteName(): string
