@@ -10,11 +10,11 @@ use Illuminate\Support\Facades\Process;
 use Aerni\Cloudflared\Facades\Cloudflared;
 use Aerni\Cloudflared\Concerns\InteractsWithHerd;
 
-class CloudflaredStart extends Command
+class CloudflaredRun extends Command
 {
     use InteractsWithHerd;
 
-    protected $signature = 'cloudflared:start';
+    protected $signature = 'cloudflared:run';
 
     protected $description = 'Run the Cloudflare Tunnel of this project.';
 
