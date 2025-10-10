@@ -3,8 +3,9 @@
 namespace Aerni\Cloudflared\Concerns;
 
 use Illuminate\Support\Facades\Process;
-use function Laravel\Prompts\info;
+
 use function Laravel\Prompts\error;
+use function Laravel\Prompts\info;
 
 trait InteractsWithHerd
 {

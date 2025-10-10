@@ -9,8 +9,7 @@ class ProjectConfig
     public function __construct(
         public readonly string $tunnel,
         public readonly string $hostname
-    ) {
-    }
+    ) {}
 
     public function save(): void
     {

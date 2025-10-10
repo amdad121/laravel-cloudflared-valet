@@ -2,12 +2,13 @@
 
 namespace Aerni\Cloudflared\Concerns;
 
-use function Laravel\Prompts\error;
-use function Laravel\Prompts\info;
-use function Laravel\Prompts\warning;
-use function Laravel\Prompts\spin;
 use Aerni\Cloudflared\TunnelConfig;
 use Illuminate\Support\Facades\Process;
+
+use function Laravel\Prompts\error;
+use function Laravel\Prompts\info;
+use function Laravel\Prompts\spin;
+use function Laravel\Prompts\warning;
 
 trait InteractsWithTunnel
 {
@@ -30,6 +31,7 @@ trait InteractsWithTunnel
 
         if ($result->seeInErrorOutput("there should only be 1 non-deleted Tunnel named {$name}")) {
             warning(" ⚠ Can't delete tunnel {$name} as it doesn't exist.");
+
             return;
         }
 

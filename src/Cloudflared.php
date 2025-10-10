@@ -2,8 +2,8 @@
 
 namespace Aerni\Cloudflared;
 
-use Symfony\Component\Yaml\Yaml;
 use Illuminate\Support\Facades\File;
+use Symfony\Component\Yaml\Yaml;
 
 class Cloudflared
 {

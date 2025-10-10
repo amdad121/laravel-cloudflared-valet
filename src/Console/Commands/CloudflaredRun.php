@@ -2,14 +2,15 @@
 
 namespace Aerni\Cloudflared\Console\Commands;
 
-use Illuminate\Console\Command;
-use function Laravel\Prompts\info;
-use function Laravel\Prompts\error;
-use Aerni\Cloudflared\TunnelConfig;
-use Illuminate\Support\Facades\Process;
-use Aerni\Cloudflared\Facades\Cloudflared;
 use Aerni\Cloudflared\Concerns\InteractsWithHerd;
 use Aerni\Cloudflared\Concerns\InteractsWithTunnel;
+use Aerni\Cloudflared\Facades\Cloudflared;
+use Aerni\Cloudflared\TunnelConfig;
+use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Process;
+
+use function Laravel\Prompts\error;
+use function Laravel\Prompts\info;
 
 class CloudflaredRun extends Command
 {
@@ -85,17 +86,17 @@ class CloudflaredRun extends Command
             $process->wait();
 
             // If process exited normally or was terminated by our signal handler, clean up
-            if (!$shuttingDown) {
+            if (! $shuttingDown) {
                 $this->cleanupCloudflaredProcess();
             }
         } catch (\Exception $e) {
             // Ensure process is terminated on any failure
-            if ($process->running() && !$shuttingDown) {
+            if ($process->running() && ! $shuttingDown) {
                 $process->signal(SIGTERM);
                 $process->wait();
             }
 
-            if (!$shuttingDown) {
+            if (! $shuttingDown) {
                 $this->cleanupCloudflaredProcess();
             }
 

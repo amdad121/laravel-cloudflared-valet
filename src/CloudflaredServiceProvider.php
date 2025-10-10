@@ -2,11 +2,11 @@
 
 namespace Aerni\Cloudflared;
 
-use Illuminate\Support\ServiceProvider;
-use Aerni\Cloudflared\Facades\Cloudflared;
-use Aerni\Cloudflared\Console\Commands\CloudflaredRun;
 use Aerni\Cloudflared\Console\Commands\CloudflaredInstall;
+use Aerni\Cloudflared\Console\Commands\CloudflaredRun;
 use Aerni\Cloudflared\Console\Commands\CloudflaredUninstall;
+use Aerni\Cloudflared\Facades\Cloudflared;
+use Illuminate\Support\ServiceProvider;
 
 class CloudflaredServiceProvider extends ServiceProvider
 {

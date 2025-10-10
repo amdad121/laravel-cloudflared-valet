@@ -8,6 +8,7 @@ use Aerni\Cloudflared\Facades\Cloudflared;
 use Aerni\Cloudflared\ProjectConfig;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Process;
+
 use function Laravel\Prompts\error;
 use function Laravel\Prompts\info;
 use function Laravel\Prompts\select;
