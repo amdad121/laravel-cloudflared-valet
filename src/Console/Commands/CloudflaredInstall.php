@@ -9,6 +9,7 @@ use Aerni\Cloudflared\ProjectConfig;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Process;
 
+use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\error;
 use function Laravel\Prompts\info;
 use function Laravel\Prompts\select;
@@ -35,9 +36,16 @@ class CloudflaredInstall extends Command
             $this->handleExistingInstallation();
         }
 
-        $this->createCloudflaredTunnel($this->askForHostname());
+        $hostname = $this->askForHostname();
+        $createViteDns = confirm(label: 'Do you want to create a Vite DNS record?');
+
+        $this->createCloudflaredTunnel($hostname);
         $this->createAppDnsRecord();
-        $this->createViteDnsRecord();
+
+        if ($createViteDns) {
+            $this->createViteDnsRecord();
+        }
+
         $this->createHerdLink($this->projectConfig->hostname);
         $this->saveProjectConfig();
     }
