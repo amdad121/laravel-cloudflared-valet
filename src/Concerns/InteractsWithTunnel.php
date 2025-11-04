@@ -3,11 +3,12 @@
 namespace Aerni\Cloudflared\Concerns;
 
 use Aerni\Cloudflared\TunnelDetails;
+use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Str;
+
 use function Laravel\Prompts\info;
 use function Laravel\Prompts\spin;
 use function Laravel\Prompts\warning;
-use Illuminate\Support\Facades\Process;
 
 trait InteractsWithTunnel
 {

@@ -8,6 +8,7 @@ use Aerni\Cloudflared\Facades\Cloudflared;
 use Aerni\Cloudflared\TunnelConfig;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Process;
+
 use function Laravel\Prompts\info;
 
 class CloudflaredRun extends Command

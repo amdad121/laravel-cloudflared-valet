@@ -4,6 +4,7 @@ namespace Aerni\Cloudflared\Concerns;
 
 use Aerni\Cloudflared\ProjectConfig;
 use Aerni\Cloudflared\TunnelConfig;
+
 use function Laravel\Prompts\info;
 
 trait ManagesProject

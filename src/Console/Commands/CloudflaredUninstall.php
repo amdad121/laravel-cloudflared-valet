@@ -6,8 +6,8 @@ use Aerni\Cloudflared\Concerns\InteractsWithHerd;
 use Aerni\Cloudflared\Concerns\InteractsWithTunnel;
 use Aerni\Cloudflared\Concerns\ManagesProject;
 use Aerni\Cloudflared\Facades\Cloudflared;
-use Aerni\Cloudflared\TunnelConfig;
 use Illuminate\Console\Command;
+
 use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\error;
 

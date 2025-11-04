@@ -9,6 +9,7 @@ use Aerni\Cloudflared\Facades\Cloudflared;
 use Aerni\Cloudflared\ProjectConfig;
 use Aerni\Cloudflared\TunnelConfig;
 use Illuminate\Console\Command;
+
 use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\error;
 use function Laravel\Prompts\info;
@@ -69,6 +70,7 @@ class CloudflaredInstall extends Command
             $this->deleteHerdLink($tunnelConfig->hostname());
             $this->deleteProject($tunnelConfig);
             $this->handleNewInstallation();
+
             return;
         }
 
@@ -115,8 +117,8 @@ class CloudflaredInstall extends Command
             : "Are you sure you want to update the DNS record for {$config->hostname} to point to your tunnel?";
 
         $hint = $config->vite
-            ? "This will overwrite the existing DNS records."
-            : "This will overwrite the existing DNS record.";
+            ? 'This will overwrite the existing DNS records.'
+            : 'This will overwrite the existing DNS record.';
 
         if (! confirm(label: $message, hint: $hint)) {
             error(' ⚠ Cancelled.');
@@ -129,7 +131,7 @@ class CloudflaredInstall extends Command
             $this->overwriteDnsRecord($config->id, $config->viteHostname());
         }
 
-        info(" ✔ DNS records updated.");
+        info(' ✔ DNS records updated.');
     }
 
     protected function recreateTunnel(TunnelConfig $tunnelConfig): void
@@ -138,7 +140,7 @@ class CloudflaredInstall extends Command
         $this->deleteHerdLink($tunnelConfig->hostname());
         $this->deleteProject($tunnelConfig);
 
-        info(" ✔ Deleted existing tunnel. Creating new tunnel...");
+        info(' ✔ Deleted existing tunnel. Creating new tunnel...');
 
         $this->handleNewInstallation();
     }
