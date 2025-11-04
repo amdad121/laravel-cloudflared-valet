@@ -7,9 +7,9 @@ use Symfony\Component\Yaml\Yaml;
 
 class Cloudflared
 {
-    public function makeProjectConfig(string $tunnel, string $hostname): ProjectConfig
+    public function makeProjectConfig(string $id, string $name, string $hostname, bool $vite = false): ProjectConfig
     {
-        return new ProjectConfig($tunnel, $hostname);
+        return new ProjectConfig($id, $name, $hostname, $vite);
     }
 
     public function projectConfig(): ProjectConfig

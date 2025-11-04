@@ -2,13 +2,12 @@
 
 namespace Aerni\Cloudflared\Concerns;
 
-use Aerni\Cloudflared\Facades\Cloudflared;
-use Aerni\Cloudflared\ProjectConfig;
-use Illuminate\Support\Facades\Process;
+use Aerni\Cloudflared\TunnelDetails;
+use Illuminate\Support\Str;
 use function Laravel\Prompts\info;
-use function Laravel\Prompts\select;
 use function Laravel\Prompts\spin;
 use function Laravel\Prompts\warning;
+use Illuminate\Support\Facades\Process;
 
 trait InteractsWithTunnel
 {
@@ -23,12 +22,14 @@ trait InteractsWithTunnel
     {
         return spin(
             callback: fn () => Process::run("cloudflared tunnel info {$name}")->successful(),
-            message: "Verifying that there is no existing tunnel for {$name}."
+            message: "Verifying if tunnel with name [{$name}] already exists."
         );
     }
 
-    protected function createTunnel(string $name): ProjectConfig
+    protected function createTunnel(): TunnelDetails
     {
+        $name = $this->generateUniqueTunnelName();
+
         $result = spin(
             callback: fn () => Process::run("cloudflared tunnel create {$name}"),
             message: 'Creating tunnel'
@@ -42,30 +43,7 @@ trait InteractsWithTunnel
 
         info(' ✔ Created tunnel.');
 
-        return Cloudflared::makeProjectConfig(tunnel: $tunnelMatch[1], hostname: $name);
-    }
-
-    protected function handleExistingTunnel(string $name): ProjectConfig
-    {
-        warning(" ⚠ A tunnel for {$name} already exists.");
-
-        $selection = select(
-            label: 'How do you want to proceed?',
-            options: ['Choose a different hostname', 'Delete existing tunnel and continue']
-        );
-
-        if ($selection === 'Choose a different hostname') {
-            // TODO: This method only exists in the install command. Should we extract it? Or how should we handle this?
-            $hostname = $this->askForHostname();
-
-            return $this->tunnelExists($hostname)
-                ? $this->handleExistingTunnel($hostname)
-                : $this->createTunnel($hostname);
-        }
-
-        $this->deleteTunnel($name);
-
-        return $this->createTunnel($name);
+        return new TunnelDetails(id: $tunnelMatch[1], name: $name);
     }
 
     protected function deleteTunnel(string $name): void
@@ -86,52 +64,41 @@ trait InteractsWithTunnel
         info(' ✔ Deleted tunnel.');
     }
 
-    protected function createDnsRecord(string $tunnelId, string $hostname, bool $overwrite = false): void
+    protected function createDnsRecord(string $id, string $hostname): bool
     {
-        $command = $overwrite
-            ? "cloudflared tunnel route dns --overwrite-dns {$tunnelId} {$hostname}"
-            : "cloudflared tunnel route dns {$tunnelId} {$hostname}";
-
         $result = spin(
-            callback: fn () => Process::run($command),
+            callback: fn () => Process::run("cloudflared tunnel route dns {$id} {$hostname}"),
             message: "Creating DNS record: {$hostname}"
         );
 
         if ($result->seeInErrorOutput('Failed to add route: code: 1003')) {
-            $this->handleExistingDnsRecord($tunnelId, $hostname);
-
-            return;
+            return false;
         }
 
         $result->throw();
 
         info(" ✔ Created DNS record: {$hostname}");
+
+        return true;
     }
 
-    protected function handleExistingDnsRecord(string $tunnelId, string $hostname): void
+    protected function overwriteDnsRecord(string $id, string $hostname): void
     {
-        warning(" ⚠ A DNS record for {$hostname} already exists.");
-
-        $selection = select(
-            label: 'How do you want to proceed?',
-            options: ['Choose a different hostname', 'Overwrite existing record and continue', 'Abort and delete the tunnel']
+        $result = spin(
+            callback: fn () => Process::run("cloudflared tunnel route dns --overwrite-dns {$id} {$hostname}"),
+            message: "Overwriting DNS record: {$hostname}"
         );
 
-        if ($selection === 'Choose a different hostname') {
-            $this->deleteTunnel($hostname);
-            // TODO: This only works in the context of the install command. How can we make this more generic?
-            $this->handle();
+        $result->throw();
 
-            return;
-        }
+        info(" ✔ Overwritten DNS record: {$hostname}");
+    }
 
-        if ($selection === 'Overwrite existing record and continue') {
-            $this->createDnsRecord(tunnelId: $tunnelId, hostname: $hostname, overwrite: true);
+    protected function generateUniqueTunnelName(): string
+    {
+        $projectName = basename(base_path());
+        $randomId = Str::lower(Str::random(8));
 
-            return;
-        }
-
-        $this->deleteTunnel($hostname);
-        exit(0);
+        return "{$projectName}-{$randomId}";
     }
 }

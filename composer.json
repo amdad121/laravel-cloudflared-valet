@@ -1,6 +1,6 @@
 {
     "name": "aerni/cloudflared",
-    "description": "The Laravel companion package for vite-plugin-cloudflared",
+    "description": "A Laravel package to create and manage Cloudflare Tunnels for local development",
     "homepage": "https://github.com/aerni/laravel-cloudflared",
     "license": "MIT",
     "authors": [

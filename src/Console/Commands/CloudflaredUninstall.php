@@ -19,21 +19,21 @@ class CloudflaredUninstall extends Command
 
     protected $description = 'Delete the Cloudflare Tunnel of this project.';
 
-    protected TunnelConfig $tunnelConfig;
-
     public function handle()
     {
         $this->verifyCloudflaredFoundInPath();
         $this->verifyHerdFoundInPath();
 
+        // TODO: Check if there actually is a tunnel. Same as in the install command.
+        // If no tunnel exists, simply delete the config files.
         if (! Cloudflared::isInstalled()) {
             $this->fail('Missing project file: .cloudflared.yaml');
         }
 
-        $this->tunnelConfig = Cloudflared::tunnelConfig();
+        $tunnelConfig = Cloudflared::tunnelConfig();
 
         $confirmed = confirm(
-            label: "Are you sure you want to uninstall the {$this->tunnelConfig->hostname()} tunnel?",
+            label: "Are you sure you want to uninstall the {$tunnelConfig->hostname()} tunnel?",
             hint: 'Deletes the cloudflared tunnel, Herd link, and all associated configs.',
         );
 
@@ -43,9 +43,9 @@ class CloudflaredUninstall extends Command
             return self::SUCCESS;
         }
 
-        $this->deleteTunnel($this->tunnelConfig->hostname());
-        $this->deleteHerdLink($this->tunnelConfig->hostname());
-        $this->deleteProject($this->tunnelConfig);
+        $this->deleteTunnel($tunnelConfig->name());
+        $this->deleteHerdLink($tunnelConfig->hostname());
+        $this->deleteProject($tunnelConfig);
 
         // Optionally: Delete DNS record. This requires a Cloudflare API token.
     }

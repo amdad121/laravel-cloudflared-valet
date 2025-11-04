@@ -7,16 +7,27 @@ use Illuminate\Support\Facades\File;
 class ProjectConfig
 {
     public function __construct(
-        public readonly string $tunnel,
-        public readonly string $hostname
+        public readonly string $id,
+        public readonly string $name,
+        public string $hostname,
+        public bool $vite = false
     ) {}
 
     public function save(): void
     {
+        $vite = $this->vite ? 'true' : 'false';
+
         File::put(static::path(), <<<YAML
-tunnel: {$this->tunnel}
+id: {$this->id}
+name: {$this->name}
 hostname: {$this->hostname}
+vite: {$vite}
 YAML);
+    }
+
+    public function viteHostname(): string
+    {
+        return "vite-{$this->hostname}";
     }
 
     public function delete(): void

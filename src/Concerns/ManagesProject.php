@@ -12,7 +12,7 @@ trait ManagesProject
     {
         $projectConfig->save();
 
-        info(' ✔ Created project file.');
+        info(' ✔ Saved project config.');
     }
 
     protected function deleteProject(TunnelConfig $tunnelConfig): void
@@ -20,6 +20,6 @@ trait ManagesProject
         $tunnelConfig->delete();
         $tunnelConfig->projectConfig->delete();
 
-        info(' ✔ Deleted tunnel configs.');
+        info(' ✔ Deleted project config.');
     }
 }

@@ -17,7 +17,7 @@ class TunnelConfig
     public function save(): void
     {
         File::put($this->path(), <<<YAML
-tunnel: {$this->tunnel()}
+tunnel: {$this->id()}
 credentials-file: {$this->credentialsPath()}
 
 ingress:
@@ -37,9 +37,19 @@ YAML);
         return $this->projectConfig->hostname;
     }
 
-    public function tunnel(): string
+    public function viteHostname(): string
     {
-        return $this->projectConfig->tunnel;
+        return $this->projectConfig->viteHostname();
+    }
+
+    public function id(): string
+    {
+        return $this->projectConfig->id;
+    }
+
+    public function name(): string
+    {
+        return $this->projectConfig->name;
     }
 
     public function service(): string
@@ -54,11 +64,11 @@ YAML);
 
     public function path(): string
     {
-        return $this->assemble(getenv('HOME'), '.cloudflared', "{$this->tunnel()}.yaml");
+        return $this->assemble(getenv('HOME'), '.cloudflared', "{$this->id()}.yaml");
     }
 
     public function credentialsPath(): string
     {
-        return $this->assemble(getenv('HOME'), '.cloudflared', "{$this->tunnel()}.json");
+        return $this->assemble(getenv('HOME'), '.cloudflared', "{$this->id()}.json");
     }
 }

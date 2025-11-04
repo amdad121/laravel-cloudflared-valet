@@ -7,9 +7,11 @@ use Aerni\Cloudflared\Concerns\InteractsWithTunnel;
 use Aerni\Cloudflared\Concerns\ManagesProject;
 use Aerni\Cloudflared\Facades\Cloudflared;
 use Aerni\Cloudflared\ProjectConfig;
+use Aerni\Cloudflared\TunnelConfig;
 use Illuminate\Console\Command;
 use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\error;
+use function Laravel\Prompts\info;
 use function Laravel\Prompts\select;
 use function Laravel\Prompts\text;
 use function Laravel\Prompts\warning;
@@ -22,67 +24,168 @@ class CloudflaredInstall extends Command
 
     protected $description = 'Create a Cloudflare Tunnel for this project.';
 
-    protected ProjectConfig $projectConfig;
-
     public function handle()
     {
         $this->verifyCloudflaredFoundInPath();
         $this->verifyHerdFoundInPath();
 
-        if (Cloudflared::isInstalled()) {
-            $this->handleExistingInstallation();
-        }
+        Cloudflared::isInstalled()
+            ? $this->handleExistingInstallation()
+            : $this->handleNewInstallation();
+    }
 
+    protected function handleNewInstallation(): void
+    {
         $hostname = $this->askForHostname();
 
-        $createViteDnsRecord = confirm(
-            label: 'Do you want to create a DNS record for Vite?',
-            hint: 'Required for the vite-plugin-laravel-cloudflared.',
+        $vite = confirm(
+            label: 'Are you planning to use vite-plugin-laravel-cloudflared?',
+            hint: 'This will create a DNS record for Vite.',
         );
 
-        $this->projectConfig = $this->tunnelExists($hostname)
-            ? $this->handleExistingTunnel($hostname)
-            : $this->createTunnel($hostname);
+        $tunnelDetails = $this->createTunnel();
 
-        $this->createAppDnsRecord();
+        $projectConfig = Cloudflared::makeProjectConfig(
+            id: $tunnelDetails->id,
+            name: $tunnelDetails->name,
+            hostname: $hostname,
+            vite: $vite
+        );
 
-        if ($createViteDnsRecord) {
-            $this->createViteDnsRecord();
-        }
+        $this->createDnsRecords($projectConfig);
 
-        $this->createHerdLink($this->projectConfig->hostname);
-        $this->saveProjectConfig($this->projectConfig);
+        // Note: createDnsRecords() may update $projectConfig->hostname if the user chooses a different hostname
+        $this->createHerdLink($projectConfig->hostname);
+        $this->saveProjectConfig($projectConfig);
     }
 
     protected function handleExistingInstallation(): void
     {
         $tunnelConfig = Cloudflared::tunnelConfig();
 
-        warning(" ⚠ There is an existing tunnel for this project (hostname: {$tunnelConfig->hostname()}).");
+        if (! $this->tunnelExists($tunnelConfig->name())) {
+            warning(" ⚠ The tunnel [{$tunnelConfig->name()}] doesn't exist. Creating a new tunnel for this project.");
+
+            $this->deleteHerdLink($tunnelConfig->hostname());
+            $this->deleteProject($tunnelConfig);
+            $this->handleNewInstallation();
+            return;
+        }
+
+        warning(" ⚠ The tunnel [{$tunnelConfig->name()}] already exists.");
 
         $selection = select(
-            label: 'How do you want to proceed?',
-            options: ['Abort', 'Delete existing tunnel and create a new one']
+            label: 'What would you like to do?',
+            options: [
+                'Keep existing configuration',
+                'Change hostname',
+                'Repair DNS records',
+                'Delete and recreate tunnel',
+            ],
+            default: 'Keep existing configuration'
         );
 
-        if ($selection === 'Abort') {
-            error(' ⚠ Installation aborted.');
+        match ($selection) {
+            'Keep existing configuration' => exit(0),
+            'Change hostname' => $this->changeHostname($tunnelConfig->projectConfig),
+            'Repair DNS records' => $this->repairDnsRecords($tunnelConfig->projectConfig),
+            'Delete and recreate tunnel' => $this->recreateTunnel($tunnelConfig),
+        };
+    }
+
+    // If we use the API in the future, this should also delete the old DNS records.
+    protected function changeHostname(ProjectConfig $config): void
+    {
+        $oldHostname = $config->hostname;
+        $config->hostname = $this->askForHostname();
+
+        $this->createDnsRecords($config);
+        $this->deleteHerdLink($oldHostname);
+        $this->createHerdLink($config->hostname);
+
+        $config->save();
+
+        info(" ✔ Changed hostname to: {$config->hostname}");
+    }
+
+    protected function repairDnsRecords(ProjectConfig $config): void
+    {
+        $message = $config->vite
+            ? "Are you sure you want to update the DNS records for {$config->hostname} and {$config->viteHostname()} to point to your tunnel?"
+            : "Are you sure you want to update the DNS record for {$config->hostname} to point to your tunnel?";
+
+        $hint = $config->vite
+            ? "This will overwrite the existing DNS records."
+            : "This will overwrite the existing DNS record.";
+
+        if (! confirm(label: $message, hint: $hint)) {
+            error(' ⚠ Cancelled.');
             exit(0);
         }
 
-        $this->deleteTunnel($tunnelConfig->hostname());
+        $this->overwriteDnsRecord($config->id, $config->hostname);
+
+        if ($config->vite) {
+            $this->overwriteDnsRecord($config->id, $config->viteHostname());
+        }
+
+        info(" ✔ DNS records updated.");
+    }
+
+    protected function recreateTunnel(TunnelConfig $tunnelConfig): void
+    {
+        $this->deleteTunnel($tunnelConfig->name());
         $this->deleteHerdLink($tunnelConfig->hostname());
         $this->deleteProject($tunnelConfig);
+
+        info(" ✔ Deleted existing tunnel. Creating new tunnel...");
+
+        $this->handleNewInstallation();
     }
 
-    protected function createAppDnsRecord(): void
+    protected function createDnsRecords(ProjectConfig $projectConfig): void
     {
-        $this->createDnsRecord($this->projectConfig->tunnel, $this->projectConfig->hostname);
+        $existingRecords = [];
+
+        if (! $this->createDnsRecord($projectConfig->id, $projectConfig->hostname)) {
+            $existingRecords[] = $projectConfig->hostname;
+        }
+
+        if ($projectConfig->vite && ! $this->createDnsRecord($projectConfig->id, $projectConfig->viteHostname())) {
+            $existingRecords[] = $projectConfig->viteHostname();
+        }
+
+        if (! empty($existingRecords)) {
+            $this->handleExistingDnsRecords($projectConfig, $existingRecords);
+        }
     }
 
-    protected function createViteDnsRecord(): void
+    protected function handleExistingDnsRecords(ProjectConfig $projectConfig, array $existingRecords): void
     {
-        $this->createDnsRecord($this->projectConfig->tunnel, "vite-{$this->projectConfig->hostname}");
+        $recordsList = implode(' and ', $existingRecords);
+        $recordsCount = count($existingRecords);
+        $recordWord = $recordsCount === 1 ? 'record' : 'records';
+
+        warning(" ⚠ DNS {$recordWord} for {$recordsList} already exist.");
+
+        $selection = select(
+            label: 'How do you want to proceed?',
+            options: [
+                'Overwrite and point to your tunnel',
+                'Choose a different hostname',
+            ]
+        );
+
+        if ($selection === 'Overwrite and point to your tunnel') {
+            foreach ($existingRecords as $hostname) {
+                $this->overwriteDnsRecord($projectConfig->id, $hostname);
+            }
+
+            return;
+        }
+
+        $projectConfig->hostname = $this->askForHostname();
+        $this->createDnsRecords($projectConfig);
     }
 
     protected function askForHostname(): string
