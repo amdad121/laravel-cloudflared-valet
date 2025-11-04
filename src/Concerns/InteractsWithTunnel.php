@@ -55,7 +55,7 @@ trait InteractsWithTunnel
         );
 
         if ($result->seeInErrorOutput("there should only be 1 non-deleted Tunnel named {$name}")) {
-            warning(" ⚠ Can't delete tunnel {$name} as it doesn't exist.");
+            warning(" ⚠ Can't delete tunnel [{$name}] as it doesn't exist.");
 
             return;
         }

@@ -4,6 +4,7 @@ namespace Aerni\Cloudflared\Console\Commands;
 
 use Aerni\Cloudflared\Concerns\InteractsWithHerd;
 use Aerni\Cloudflared\Concerns\InteractsWithTunnel;
+use Aerni\Cloudflared\Concerns\ManagesProject;
 use Aerni\Cloudflared\Facades\Cloudflared;
 use Aerni\Cloudflared\TunnelConfig;
 use Illuminate\Console\Command;
@@ -13,13 +14,11 @@ use function Laravel\Prompts\info;
 
 class CloudflaredRun extends Command
 {
-    use InteractsWithHerd, InteractsWithTunnel;
+    use InteractsWithHerd, InteractsWithTunnel, ManagesProject;
 
     protected $signature = 'cloudflared:run';
 
     protected $description = 'Run the Cloudflare Tunnel of this project.';
-
-    protected TunnelConfig $tunnelConfig;
 
     public function handle(): void
     {
@@ -30,23 +29,18 @@ class CloudflaredRun extends Command
             $this->fail('Missing project file: .cloudflared.yaml');
         }
 
-        $this->tunnelConfig = Cloudflared::tunnelConfig();
+        $tunnelConfig = Cloudflared::tunnelConfig();
 
-        $this->createTunnelConfig();
-        $this->createHerdLink($this->tunnelConfig->hostname());
-        $this->runCloudflared();
-    }
-
-    protected function createTunnelConfig(): void
-    {
-        $this->tunnelConfig->save();
+        $this->saveTunnelConfig($tunnelConfig);
+        $this->createHerdLink($tunnelConfig->hostname());
+        $this->runCloudflared($tunnelConfig);
     }
 
     // TODO: Only show process output if it was requested via a --debug or --logLevel or something like that.
     // Else, only show errors.
 
     // TODO: Look through this and see if there is anything to optimize.
-    protected function runCloudflared(): void
+    protected function runCloudflared(TunnelConfig $tunnelConfig): void
     {
         info(' ✔ Started tunnel.');
 
@@ -55,13 +49,13 @@ class CloudflaredRun extends Command
 
         $process = Process::forever()
             ->tty()
-            ->start("cloudflared tunnel --config {$this->tunnelConfig->path()} run");
+            ->start("cloudflared tunnel --config {$tunnelConfig->path()} run");
 
         // Track if we're already shutting down to prevent duplicate signal handling
         $shuttingDown = false;
 
         // Handle multiple termination signals
-        $signalHandler = function ($signal) use ($process, &$shuttingDown) {
+        $signalHandler = function ($signal) use ($process, &$shuttingDown, $tunnelConfig) {
             if ($shuttingDown) {
                 return;
             }
@@ -73,7 +67,7 @@ class CloudflaredRun extends Command
                 $process->wait();
             }
 
-            $this->cleanupCloudflaredProcess();
+            $this->cleanupCloudflaredProcess($tunnelConfig);
             exit(0);
         };
 
@@ -86,7 +80,7 @@ class CloudflaredRun extends Command
 
             // If process exited normally or was terminated by our signal handler, clean up
             if (! $shuttingDown) {
-                $this->cleanupCloudflaredProcess();
+                $this->cleanupCloudflaredProcess($tunnelConfig);
             }
         } catch (\Exception $e) {
             // Ensure process is terminated on any failure
@@ -96,17 +90,17 @@ class CloudflaredRun extends Command
             }
 
             if (! $shuttingDown) {
-                $this->cleanupCloudflaredProcess();
+                $this->cleanupCloudflaredProcess($tunnelConfig);
             }
 
             throw $e;
         }
     }
 
-    protected function cleanupCloudflaredProcess(): void
+    protected function cleanupCloudflaredProcess(TunnelConfig $tunnelConfig): void
     {
         info(' ✔ Stopped tunnel.');
 
-        $this->tunnelConfig->delete();
+        $this->deleteTunnelConfig($tunnelConfig);
     }
 }

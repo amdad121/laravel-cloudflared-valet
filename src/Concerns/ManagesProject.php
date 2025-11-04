@@ -23,4 +23,18 @@ trait ManagesProject
 
         info(' ✔ Deleted project config.');
     }
+
+    protected function saveTunnelConfig(TunnelConfig $tunnelConfig): void
+    {
+        $tunnelConfig->save();
+
+        info(' ✔ Saved tunnel config.');
+    }
+
+    protected function deleteTunnelConfig(TunnelConfig $tunnelConfig): void
+    {
+        $tunnelConfig->delete();
+
+        info(' ✔ Deleted tunnel config.');
+    }
 }

@@ -24,8 +24,6 @@ class CloudflaredUninstall extends Command
         $this->verifyCloudflaredFoundInPath();
         $this->verifyHerdFoundInPath();
 
-        // TODO: Check if there actually is a tunnel. Same as in the install command.
-        // If no tunnel exists, simply delete the config files.
         if (! Cloudflared::isInstalled()) {
             $this->fail('Missing project file: .cloudflared.yaml');
         }
@@ -33,8 +31,9 @@ class CloudflaredUninstall extends Command
         $tunnelConfig = Cloudflared::tunnelConfig();
 
         $confirmed = confirm(
-            label: "Are you sure you want to uninstall the {$tunnelConfig->hostname()} tunnel?",
+            label: "Are you sure you want to delete the {$tunnelConfig->name()} tunnel?",
             hint: 'Deletes the cloudflared tunnel, Herd link, and all associated configs.',
+            default: false,
         );
 
         if (! $confirmed) {
