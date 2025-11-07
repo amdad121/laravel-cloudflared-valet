@@ -5,6 +5,7 @@ namespace Aerni\Cloudflared\Console\Commands;
 use Aerni\Cloudflared\Concerns\InteractsWithHerd;
 use Aerni\Cloudflared\Concerns\InteractsWithTunnel;
 use Aerni\Cloudflared\Concerns\ManagesProject;
+use Aerni\Cloudflared\Exceptions\DnsRecordAlreadyExistsException;
 use Aerni\Cloudflared\Facades\Cloudflared;
 use Aerni\Cloudflared\ProjectConfig;
 use Aerni\Cloudflared\TunnelConfig;
@@ -55,8 +56,6 @@ class CloudflaredInstall extends Command
         );
 
         $this->createDnsRecords($projectConfig);
-
-        // Note: createDnsRecords() may update $projectConfig->hostname if the user chooses a different hostname
         $this->createHerdLink($projectConfig->hostname);
         $this->saveProjectConfig($projectConfig);
     }
@@ -102,7 +101,7 @@ class CloudflaredInstall extends Command
         exit(0);
     }
 
-    // If we use the API in the future, this should also delete the old DNS records.
+    // Todo: If we use the Cloudflare API in the future, this should also delete the old DNS records.
     protected function changeHostname(ProjectConfig $config): void
     {
         $oldHostname = $config->hostname;
@@ -151,14 +150,20 @@ class CloudflaredInstall extends Command
 
     protected function createDnsRecords(ProjectConfig $projectConfig): void
     {
-        $existingRecords = [];
+        $hostnames = [$projectConfig->hostname];
 
-        if (! $this->createDnsRecord($projectConfig->id, $projectConfig->hostname)) {
-            $existingRecords[] = $projectConfig->hostname;
+        if ($projectConfig->vite) {
+            $hostnames[] = $projectConfig->viteHostname();
         }
 
-        if ($projectConfig->vite && ! $this->createDnsRecord($projectConfig->id, $projectConfig->viteHostname())) {
-            $existingRecords[] = $projectConfig->viteHostname();
+        $existingRecords = [];
+
+        foreach ($hostnames as $hostname) {
+            try {
+                $this->createDnsRecord($projectConfig->id, $hostname);
+            } catch (DnsRecordAlreadyExistsException $e) {
+                $existingRecords[] = $hostname;
+            }
         }
 
         if (! empty($existingRecords)) {
@@ -168,7 +173,7 @@ class CloudflaredInstall extends Command
 
     protected function handleExistingDnsRecords(ProjectConfig $projectConfig, array $existingRecords): void
     {
-        warning(' ⚠ ' . trans_choice(
+        warning(' ⚠ '.trans_choice(
             '{1} DNS record :records already exists.|[2,*] DNS records :records already exist.',
             count($existingRecords),
             ['records' => Arr::join($existingRecords, ', ', ' and ')]

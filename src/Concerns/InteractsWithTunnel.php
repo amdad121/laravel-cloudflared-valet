@@ -2,6 +2,7 @@
 
 namespace Aerni\Cloudflared\Concerns;
 
+use Aerni\Cloudflared\Exceptions\DnsRecordAlreadyExistsException;
 use Aerni\Cloudflared\TunnelDetails;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Str;
@@ -65,7 +66,7 @@ trait InteractsWithTunnel
         info(" ✔ Deleted tunnel: {$name}");
     }
 
-    protected function createDnsRecord(string $id, string $hostname): bool
+    protected function createDnsRecord(string $id, string $hostname): void
     {
         $result = spin(
             callback: fn () => Process::run("cloudflared tunnel route dns {$id} {$hostname}"),
@@ -73,14 +74,12 @@ trait InteractsWithTunnel
         );
 
         if ($result->seeInErrorOutput('Failed to add route: code: 1003')) {
-            return false;
+            throw new DnsRecordAlreadyExistsException($hostname);
         }
 
         $result->throw();
 
         info(" ✔ Created DNS record: {$hostname}");
-
-        return true;
     }
 
     protected function overwriteDnsRecord(string $id, string $hostname): void
