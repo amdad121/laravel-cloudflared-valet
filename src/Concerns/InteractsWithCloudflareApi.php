@@ -3,6 +3,7 @@
 namespace Aerni\Cloudflared\Concerns;
 
 use Aerni\Cloudflared\CloudflareClient;
+use Aerni\Cloudflared\Exceptions\NotATunnelDnsRecordException;
 use Aerni\Cloudflared\TunnelConfig;
 use Illuminate\Support\Facades\Cache;
 
@@ -31,14 +32,18 @@ trait InteractsWithCloudflareApi
 
     protected function deleteDnsRecord(string $hostname): void
     {
-        $result = spin(
-            callback: fn () => $this->cloudflare()->deleteDnsRecord($hostname),
-            message: "Deleting DNS record: {$hostname}"
-        );
+        try {
+            $result = spin(
+                callback: fn () => $this->cloudflare()->deleteDnsRecord($hostname),
+                message: "Deleting DNS record: {$hostname}"
+            );
 
-        $result
-            ? info(" ✔ Deleted DNS record: {$hostname}")
-            : warning(" ⚠ Can't delete DNS record {$hostname} because it doesn't exist.");
+            $result
+                ? info(" ✔ Deleted DNS record: {$hostname}")
+                : warning(" ⚠ Can't delete DNS record {$hostname} because it doesn't exist.");
+        } catch (NotATunnelDnsRecordException) {
+            warning(" ⚠ Skipped deleting DNS record {$hostname} because it's not a Cloudflare Tunnel record.");
+        }
     }
 
     protected function deleteDnsRecords(TunnelConfig $tunnelConfig): void

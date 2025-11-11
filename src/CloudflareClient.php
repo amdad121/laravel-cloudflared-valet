@@ -2,6 +2,7 @@
 
 namespace Aerni\Cloudflared;
 
+use Aerni\Cloudflared\Exceptions\NotATunnelDnsRecordException;
 use Cloudflare\API\Adapter\Guzzle;
 use Cloudflare\API\Auth\APIToken;
 use Cloudflare\API\Endpoints\DNS;
@@ -68,10 +69,21 @@ class CloudflareClient
         return $this->dns->getRecordID($this->certificate->zoneId, $type, $hostname);
     }
 
+    public function isTunnelRecord(string $recordId): bool
+    {
+        $record = $this->dns->getRecordDetails($this->certificate->zoneId, $recordId);
+
+        return isset($record->content) && str_ends_with($record->content, '.cfargotunnel.com');
+    }
+
     public function deleteDnsRecord(string $hostname, string $type = 'CNAME'): bool
     {
         if (! $recordId = $this->getDnsRecordId($hostname, $type)) {
             return false;
+        }
+
+        if (! $this->isTunnelRecord($recordId)) {
+            throw new NotATunnelDnsRecordException($hostname);
         }
 
         return $this->dns->deleteRecord($this->certificate->zoneId, $recordId);
