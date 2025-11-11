@@ -2,6 +2,7 @@
 
 namespace Aerni\Cloudflared\Console\Commands;
 
+use Aerni\Cloudflared\Concerns\InteractsWithCloudflareApi;
 use Aerni\Cloudflared\Concerns\InteractsWithHerd;
 use Aerni\Cloudflared\Concerns\InteractsWithTunnel;
 use Aerni\Cloudflared\Concerns\ManagesProject;
@@ -21,7 +22,7 @@ use function Laravel\Prompts\warning;
 
 class CloudflaredInstall extends Command
 {
-    use InteractsWithHerd, InteractsWithTunnel, ManagesProject;
+    use InteractsWithCloudflareApi, InteractsWithHerd, InteractsWithTunnel, ManagesProject;
 
     protected $signature = 'cloudflared:install';
 
@@ -39,7 +40,7 @@ class CloudflaredInstall extends Command
 
     protected function handleNewInstallation(): void
     {
-        $hostname = $this->askForHostname();
+        $hostname = $this->askForSubdomain();
 
         $vite = confirm(
             label: 'Are you planning to use vite-plugin-laravel-cloudflared?',
@@ -102,27 +103,27 @@ class CloudflaredInstall extends Command
     }
 
     // Todo: If we use the Cloudflare API in the future, this should also delete the old DNS records.
-    protected function changeHostname(ProjectConfig $config): void
+    protected function changeHostname(ProjectConfig $projectConfig): void
     {
-        $oldHostname = $config->hostname;
-        $config->hostname = $this->askForHostname();
+        $oldHostname = $projectConfig->hostname;
+        $projectConfig->hostname = $this->askForSubdomain();
 
-        $this->createDnsRecords($config);
+        $this->createDnsRecords($projectConfig);
         $this->deleteHerdLink($oldHostname);
-        $this->createHerdLink($config->hostname);
+        $this->createHerdLink($projectConfig->hostname);
 
-        $config->save();
+        $projectConfig->save();
 
-        info(" ✔ Changed hostname to: {$config->hostname}");
+        info(" ✔ Changed hostname to: {$projectConfig->hostname}");
     }
 
-    protected function repairDnsRecords(ProjectConfig $config): void
+    protected function repairDnsRecords(ProjectConfig $projectConfig): void
     {
-        $message = $config->vite
-            ? "Are you sure you want to update the DNS records for {$config->hostname} and {$config->viteHostname()} to point to your tunnel?"
-            : "Are you sure you want to update the DNS record for {$config->hostname} to point to your tunnel?";
+        $message = $projectConfig->vite
+            ? "Are you sure you want to update the DNS records for {$projectConfig->hostname} and {$projectConfig->viteHostname()} to point to your tunnel?"
+            : "Are you sure you want to update the DNS record for {$projectConfig->hostname} to point to your tunnel?";
 
-        $hint = $config->vite
+        $hint = $projectConfig->vite
             ? 'This will overwrite the existing DNS records.'
             : 'This will overwrite the existing DNS record.';
 
@@ -131,10 +132,10 @@ class CloudflaredInstall extends Command
             exit(0);
         }
 
-        $this->overwriteDnsRecord($config->id, $config->hostname);
+        $this->overwriteDnsRecord($projectConfig->id, $projectConfig->hostname);
 
-        if ($config->vite) {
-            $this->overwriteDnsRecord($config->id, $config->viteHostname());
+        if ($projectConfig->vite) {
+            $this->overwriteDnsRecord($projectConfig->id, $projectConfig->viteHostname());
         }
 
         info(' ✔ DNS records updated.');
@@ -195,21 +196,20 @@ class CloudflaredInstall extends Command
             return;
         }
 
-        $projectConfig->hostname = $this->askForHostname();
+        $projectConfig->hostname = $this->askForSubdomain();
         $this->createDnsRecords($projectConfig);
     }
 
-    protected function askForHostname(): string
+    protected function askForSubdomain(): string
     {
-        return text(
-            label: 'What hostname do you want to connect to this tunnel?',
-            placeholder: "{$this->herdSiteName()}.domain.com",
-            hint: "Use a subdomain that matches the name of this site (e.g., {$this->herdSiteName()}.domain.com).",
-            validate: fn (string $value) => match (true) {
-                empty($value) => 'The hostname is required.',
-                count(array_filter(explode('.', $value))) < 3 => "The hostname must be a subdomain (e.g., {$this->herdSiteName()}.domain.com).",
-                default => null,
-            },
+        $domain = $this->authenticatedDomain();
+
+        $subdomain = text(
+            label: 'What subdomain do you want to use for this tunnel?',
+            placeholder: $this->herdSiteName(),
+            hint: "The tunnel will be available at {subdomain}.{$domain}",
         );
+
+        return "{$subdomain}.{$domain}";
     }
 }

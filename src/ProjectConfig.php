@@ -35,6 +35,11 @@ YAML);
         File::delete(static::path());
     }
 
+    public static function exists(): bool
+    {
+        return File::exists(static::path());
+    }
+
     public static function path(): string
     {
         return base_path('.cloudflared.yaml');

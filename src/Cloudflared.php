@@ -2,7 +2,6 @@
 
 namespace Aerni\Cloudflared;
 
-use Illuminate\Support\Facades\File;
 use Symfony\Component\Yaml\Yaml;
 
 class Cloudflared
@@ -30,6 +29,20 @@ class Cloudflared
 
     public function isInstalled(): bool
     {
-        return File::exists(ProjectConfig::path());
+        return ProjectConfig::exists();
+    }
+
+    public function isAuthenticated(): bool
+    {
+        return Certificate::exists();
+    }
+
+    public function certificate(): Certificate
+    {
+        if (! $this->isAuthenticated()) {
+            throw new \RuntimeException('Cloudflared is not authenticated. Please run "cloudflared tunnel login" first.');
+        }
+
+        return Certificate::load();
     }
 }
