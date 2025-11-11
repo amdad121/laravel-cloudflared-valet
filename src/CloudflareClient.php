@@ -11,6 +11,7 @@ use Cloudflare\API\Endpoints\Zones;
 class CloudflareClient
 {
     protected Zones $zones;
+
     protected DNS $dns;
 
     public function __construct(protected Certificate $certificate)

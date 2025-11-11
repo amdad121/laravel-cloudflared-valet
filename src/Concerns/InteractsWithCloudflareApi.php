@@ -7,8 +7,8 @@ use Aerni\Cloudflared\Exceptions\NotATunnelDnsRecordException;
 use Aerni\Cloudflared\TunnelConfig;
 use Illuminate\Support\Facades\Cache;
 
-use function Laravel\Prompts\spin;
 use function Laravel\Prompts\info;
+use function Laravel\Prompts\spin;
 use function Laravel\Prompts\warning;
 
 trait InteractsWithCloudflareApi

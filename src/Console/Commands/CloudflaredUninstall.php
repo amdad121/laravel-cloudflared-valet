@@ -11,9 +11,6 @@ use Illuminate\Console\Command;
 
 use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\error;
-use function Laravel\Prompts\info;
-use function Laravel\Prompts\spin;
-use function Laravel\Prompts\warning;
 
 class CloudflaredUninstall extends Command
 {
