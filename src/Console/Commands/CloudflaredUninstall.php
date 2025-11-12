@@ -26,7 +26,7 @@ class CloudflaredUninstall extends Command
         $this->verifyHerdFoundInPath();
 
         if (! Cloudflared::isInstalled()) {
-            $this->fail('Project file .cloudflared.yaml not found.');
+            $this->fail('No project configuration found. Run "php artisan cloudflared:install" first.');
         }
 
         $tunnelConfig = Cloudflared::tunnelConfig();
