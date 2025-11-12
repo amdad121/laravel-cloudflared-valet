@@ -31,13 +31,7 @@ class CloudflaredServiceProvider extends ServiceProvider
 
     protected function registerCloudflareClient(): void
     {
-        $this->app->singleton(CloudflareClient::class, function ($app) {
-            if (! Certificate::exists()) {
-                throw new \RuntimeException('Cloudflare certificate not found. Please authenticate with cloudflared first.');
-            }
-
-            return new CloudflareClient(Certificate::load());
-        });
+        $this->app->singleton(CloudflareClient::class, fn () => new CloudflareClient(Certificate::load()));
     }
 
     protected function setAppUrl(): void

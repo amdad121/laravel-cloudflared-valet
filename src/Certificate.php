@@ -14,6 +14,10 @@ class Certificate
 
     public static function load(): self
     {
+        if (! static::exists()) {
+            throw new \RuntimeException('Cloudflared certificate not found. Please authenticate first by running "cloudflared tunnel login".');
+        }
+
         $certContent = File::get(static::path());
 
         if (! preg_match('/-----BEGIN ARGO TUNNEL TOKEN-----(.*?)-----END ARGO TUNNEL TOKEN-----/s', $certContent, $matches)) {

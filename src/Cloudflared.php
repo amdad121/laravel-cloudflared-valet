@@ -23,13 +23,4 @@ class Cloudflared
     {
         return Certificate::exists();
     }
-
-    public function certificate(): Certificate
-    {
-        if (! $this->isAuthenticated()) {
-            throw new \RuntimeException('Cloudflared is not authenticated. Please run "cloudflared tunnel login" first.');
-        }
-
-        return Certificate::load();
-    }
 }
