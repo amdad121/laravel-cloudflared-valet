@@ -44,7 +44,7 @@ class CloudflaredInstall extends Command
 
         $vite = confirm(
             label: 'Are you planning to use vite-plugin-laravel-cloudflared?',
-            hint: 'This will create a DNS record for Vite.',
+            hint: "Creates DNS record: vite-{$hostname}",
         );
 
         $tunnelDetails = $this->createTunnel();
@@ -144,8 +144,6 @@ class CloudflaredInstall extends Command
         if ($projectConfig->vite) {
             $this->overwriteDnsRecord($projectConfig->id, $projectConfig->viteHostname());
         }
-
-        info(' ✔ DNS records updated.');
     }
 
     protected function recreateTunnel(TunnelConfig $tunnelConfig): void
