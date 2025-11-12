@@ -109,8 +109,6 @@ class CloudflaredInstall extends Command
 
         $projectConfig->hostname = $this->askForSubdomain();
 
-        $this->createDnsRecords($projectConfig);
-
         $this->deleteDnsRecord($oldHostname);
 
         if ($projectConfig->vite) {
@@ -118,6 +116,9 @@ class CloudflaredInstall extends Command
         }
 
         $this->deleteHerdLink($oldHostname);
+
+        $this->createDnsRecords($projectConfig);
+
         $this->createHerdLink($projectConfig->hostname);
 
         $projectConfig->save();
