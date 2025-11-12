@@ -149,6 +149,12 @@ class CloudflaredInstall extends Command
     protected function recreateTunnel(TunnelConfig $tunnelConfig): void
     {
         $this->deleteTunnel($tunnelConfig->name());
+        $this->deleteDnsRecord($tunnelConfig->hostname());
+
+        if ($tunnelConfig->projectConfig->vite) {
+            $this->deleteDnsRecord($tunnelConfig->viteHostname());
+        }
+
         $this->deleteHerdLink($tunnelConfig->hostname());
         $this->deleteProject($tunnelConfig);
         $this->handleNewInstallation();
