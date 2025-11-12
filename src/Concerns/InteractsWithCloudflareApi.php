@@ -22,8 +22,8 @@ trait InteractsWithCloudflareApi
     {
         try {
             return Cache::rememberForever(
-                "cloudflared.domain.{$this->cloudflare()->hash()}",
-                fn () => $this->cloudflare()->getZoneName()
+                "cloudflared.domain.{$this->cloudflare()->certificate->hash()}",
+                fn () => $this->cloudflare()->zoneName()
             );
         } catch (\Throwable $e) {
             return $this->fail($e->getMessage());

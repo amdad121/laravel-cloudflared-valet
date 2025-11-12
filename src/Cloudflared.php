@@ -18,9 +18,4 @@ class Cloudflared
     {
         return ProjectConfig::exists();
     }
-
-    public function isAuthenticated(): bool
-    {
-        return Certificate::exists();
-    }
 }
