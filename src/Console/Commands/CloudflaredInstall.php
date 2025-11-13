@@ -42,8 +42,8 @@ class CloudflaredInstall extends Command
         $hostname = $this->askForSubdomain();
 
         $vite = confirm(
-            label: 'Are you planning to use vite-plugin-laravel-cloudflared?',
-            hint: "Creates DNS record: vite-{$hostname}",
+            label: 'Do you want to create a DNS record for Vite?',
+            hint: "Required for vite-plugin-laravel-cloudflared. Creates DNS record: vite-{$hostname}",
         );
 
         $tunnelDetails = $this->createTunnel();
@@ -81,6 +81,7 @@ class CloudflaredInstall extends Command
             options: [
                 'Keep existing configuration',
                 'Change subdomain',
+                ...! $tunnelConfig->projectConfig->vite ? ['Create Vite DNS record'] : [],
                 'Repair DNS records',
                 'Delete and recreate tunnel',
             ],
@@ -92,6 +93,7 @@ class CloudflaredInstall extends Command
             'Change subdomain' => $this->changeSubdomain($tunnelConfig->projectConfig),
             'Repair DNS records' => $this->repairDnsRecords($tunnelConfig->projectConfig),
             'Delete and recreate tunnel' => $this->recreateTunnel($tunnelConfig),
+            'Create Vite DNS record' => $this->createViteDnsRecord($tunnelConfig->projectConfig),
         };
     }
 
@@ -157,6 +159,27 @@ class CloudflaredInstall extends Command
         $this->deleteHerdLink($tunnelConfig->hostname());
         $this->deleteProject($tunnelConfig);
         $this->handleNewInstallation();
+    }
+
+    protected function createViteDnsRecord(ProjectConfig $projectConfig): void
+    {
+        $projectConfig->vite = true;
+
+        if (! confirm(
+            label: 'Are you sure you want to create a DNS record for Vite?',
+            hint: "Creates DNS record: {$projectConfig->viteHostname()}"
+        )) {
+            error(' ⚠ Cancelled.');
+            exit(0);
+        }
+
+        try {
+            $this->createDnsRecord($projectConfig->id, $projectConfig->viteHostname());
+        } catch (DnsRecordAlreadyExistsException) {
+            $this->handleExistingDnsRecords($projectConfig, [$projectConfig->viteHostname()]);
+        }
+
+        $projectConfig->save();
     }
 
     protected function createDnsRecords(ProjectConfig $projectConfig): void

@@ -33,7 +33,7 @@ class CloudflaredUninstall extends Command
 
         $confirmed = confirm(
             label: "Are you sure you want to delete tunnel {$tunnelConfig->name()}?",
-            hint: 'This will delete the tunnel, DNS records, Herd link, and all associated configs.',
+            hint: 'Deletes the tunnel, DNS records, Herd link, and all associated configs.',
             default: false,
         );
 
