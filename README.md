@@ -1,5 +1,3 @@
-![Packagist version](https://flat.badgen.net/packagist/v/aerni/cloudflared/latest) ![Packagist Total Downloads](https://flat.badgen.net/packagist/dt/aerni/cloudflared)
-
 # Cloudflared for Laravel
 
 An opinionated package to create and manage Cloudflare Tunnels for your Laravel projects.
