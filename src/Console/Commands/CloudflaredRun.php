@@ -2,7 +2,7 @@
 
 namespace Aerni\Cloudflared\Console\Commands;
 
-use Aerni\Cloudflared\Concerns\InteractsWithHerd;
+use Aerni\Cloudflared\Concerns\InteractsWithValet;
 use Aerni\Cloudflared\Concerns\InteractsWithTunnel;
 use Aerni\Cloudflared\Concerns\ManagesProject;
 use Aerni\Cloudflared\Data\TunnelConfig;
@@ -14,7 +14,7 @@ use function Laravel\Prompts\info;
 
 class CloudflaredRun extends Command
 {
-    use InteractsWithHerd, InteractsWithTunnel, ManagesProject;
+    use InteractsWithValet, InteractsWithTunnel, ManagesProject;
 
     protected $signature = 'cloudflared:run';
 
@@ -23,7 +23,7 @@ class CloudflaredRun extends Command
     public function handle(): void
     {
         $this->verifyCloudflaredFoundInPath();
-        $this->verifyHerdFoundInPath();
+        $this->verifyValetFoundInPath();
 
         if (! Cloudflared::isInstalled()) {
             $this->fail('No project configuration found. Run "php artisan cloudflared:install" first.');
@@ -32,7 +32,7 @@ class CloudflaredRun extends Command
         $tunnelConfig = Cloudflared::tunnelConfig();
 
         $this->saveTunnelConfig($tunnelConfig);
-        $this->createHerdLink($tunnelConfig->hostname());
+        $this->createValetLink($tunnelConfig->hostname());
         $this->runCloudflared($tunnelConfig);
     }
 

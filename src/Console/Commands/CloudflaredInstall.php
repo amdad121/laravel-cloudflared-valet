@@ -3,7 +3,7 @@
 namespace Aerni\Cloudflared\Console\Commands;
 
 use Aerni\Cloudflared\Concerns\InteractsWithCloudflareApi;
-use Aerni\Cloudflared\Concerns\InteractsWithHerd;
+use Aerni\Cloudflared\Concerns\InteractsWithValet;
 use Aerni\Cloudflared\Concerns\InteractsWithTunnel;
 use Aerni\Cloudflared\Concerns\ManagesProject;
 use Aerni\Cloudflared\Data\ProjectConfig;
@@ -21,7 +21,7 @@ use function Laravel\Prompts\warning;
 
 class CloudflaredInstall extends Command
 {
-    use InteractsWithCloudflareApi, InteractsWithHerd, InteractsWithTunnel, ManagesProject;
+    use InteractsWithCloudflareApi, InteractsWithValet, InteractsWithTunnel, ManagesProject;
 
     protected $signature = 'cloudflared:install';
 
@@ -30,7 +30,7 @@ class CloudflaredInstall extends Command
     public function handle()
     {
         $this->verifyCloudflaredFoundInPath();
-        $this->verifyHerdFoundInPath();
+        $this->verifyValetFoundInPath();
 
         Cloudflared::isInstalled()
             ? $this->handleExistingInstallation()
@@ -56,7 +56,7 @@ class CloudflaredInstall extends Command
         );
 
         $this->createDnsRecords($projectConfig);
-        $this->createHerdLink($projectConfig->hostname);
+        $this->createValetLink($projectConfig->hostname);
         $this->saveProjectConfig($projectConfig);
     }
 
@@ -67,7 +67,7 @@ class CloudflaredInstall extends Command
         if (! $this->tunnelExists($tunnelConfig->name())) {
             warning(" ⚠ Tunnel {$tunnelConfig->name()} doesn't exist. Cleaning up old configs and creating a new tunnel.");
 
-            $this->deleteHerdLink($tunnelConfig->hostname());
+            $this->deleteValetLink($tunnelConfig->hostname());
             $this->deleteProject($tunnelConfig);
             $this->handleNewInstallation();
 
@@ -116,11 +116,11 @@ class CloudflaredInstall extends Command
             $this->deleteDnsRecord($oldViteHostname);
         }
 
-        $this->deleteHerdLink($oldHostname);
+        $this->deleteValetLink($oldHostname);
 
         $this->createDnsRecords($projectConfig);
 
-        $this->createHerdLink($projectConfig->hostname);
+        $this->createValetLink($projectConfig->hostname);
 
         $projectConfig->save();
     }
@@ -156,7 +156,7 @@ class CloudflaredInstall extends Command
             $this->deleteDnsRecord($tunnelConfig->viteHostname());
         }
 
-        $this->deleteHerdLink($tunnelConfig->hostname());
+        $this->deleteValetLink($tunnelConfig->hostname());
         $this->deleteProject($tunnelConfig);
         $this->handleNewInstallation();
     }
@@ -239,7 +239,7 @@ class CloudflaredInstall extends Command
 
         $subdomain = text(
             label: 'What subdomain do you want to use for this tunnel?',
-            placeholder: $this->herdSiteName(),
+            placeholder: $this->valetSiteName(),
             hint: "The tunnel will be available at {subdomain}.{$domain}",
         );
 

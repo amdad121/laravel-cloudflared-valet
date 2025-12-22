@@ -6,30 +6,30 @@ use Illuminate\Support\Facades\Process;
 
 use function Laravel\Prompts\info;
 
-trait InteractsWithHerd
+trait InteractsWithValet
 {
-    protected function verifyHerdFoundInPath(): void
+    protected function verifyValetFoundInPath(): void
     {
-        if (Process::run('herd --version')->failed()) {
-            $this->fail('Laravel Herd not found in PATH.');
+        if (Process::run('valet --version')->failed()) {
+            $this->fail('Laravel Valet not found in PATH.');
         }
     }
 
-    protected function createHerdLink(string $hostname): void
+    protected function createValetLink(string $hostname): void
     {
-        Process::run("herd link {$hostname}")->throw();
+        Process::run("valet link {$hostname}")->throw();
 
-        info(" ✔ Created Herd link: {$hostname}");
+        info(" ✔ Created Valet link: {$hostname}");
     }
 
-    protected function deleteHerdLink(string $hostname): void
+    protected function deleteValetLink(string $hostname): void
     {
-        Process::run("herd unlink {$hostname}")->throw();
+        Process::run("valet unlink {$hostname}")->throw();
 
-        info(" ✔ Deleted Herd link: {$hostname}");
+        info(" ✔ Deleted Valet link: {$hostname}");
     }
 
-    protected function herdSiteName(): string
+    protected function valetSiteName(): string
     {
         return basename(base_path());
     }

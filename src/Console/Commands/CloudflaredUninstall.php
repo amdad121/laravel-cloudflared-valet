@@ -3,7 +3,7 @@
 namespace Aerni\Cloudflared\Console\Commands;
 
 use Aerni\Cloudflared\Concerns\InteractsWithCloudflareApi;
-use Aerni\Cloudflared\Concerns\InteractsWithHerd;
+use Aerni\Cloudflared\Concerns\InteractsWithValet;
 use Aerni\Cloudflared\Concerns\InteractsWithTunnel;
 use Aerni\Cloudflared\Concerns\ManagesProject;
 use Aerni\Cloudflared\Facades\Cloudflared;
@@ -14,7 +14,7 @@ use function Laravel\Prompts\error;
 
 class CloudflaredUninstall extends Command
 {
-    use InteractsWithCloudflareApi, InteractsWithHerd, InteractsWithTunnel, ManagesProject;
+    use InteractsWithCloudflareApi, InteractsWithValet, InteractsWithTunnel, ManagesProject;
 
     protected $signature = 'cloudflared:uninstall';
 
@@ -23,7 +23,7 @@ class CloudflaredUninstall extends Command
     public function handle()
     {
         $this->verifyCloudflaredFoundInPath();
-        $this->verifyHerdFoundInPath();
+        $this->verifyValetFoundInPath();
 
         if (! Cloudflared::isInstalled()) {
             $this->fail('No project configuration found. Run "php artisan cloudflared:install" first.');
@@ -33,7 +33,7 @@ class CloudflaredUninstall extends Command
 
         $confirmed = confirm(
             label: "Are you sure you want to delete tunnel {$tunnelConfig->name()}?",
-            hint: 'Deletes the tunnel, DNS records, Herd link, and all associated configs.',
+            hint: 'Deletes the tunnel, DNS records, Valet link, and all associated configs.',
             default: false,
         );
 
@@ -44,7 +44,7 @@ class CloudflaredUninstall extends Command
         }
 
         $this->deleteTunnel($tunnelConfig->name());
-        $this->deleteHerdLink($tunnelConfig->hostname());
+        $this->deleteValetLink($tunnelConfig->hostname());
         $this->deleteDnsRecords($tunnelConfig);
         $this->deleteProject($tunnelConfig);
     }

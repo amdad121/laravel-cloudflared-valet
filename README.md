@@ -8,21 +8,21 @@ Pair it with [Cloudflared for Vite](https://github.com/aerni/vite-plugin-laravel
 
 1. Install [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads)
 2. Run `cloudflared tunnel login` to authenticate the desired domain
-3. Install [Laravel Herd](https://herd.laravel.com)
+3. Install [Laravel Valet](https://github.com/laravel/valet)
 
 ## Installation
 
 Install the package using Composer:
 
 ```bash
-composer require aerni/cloudflared
+composer require amdadulhaq/cloudflared
 ```
 
 ## Basic Usage
 
 ### Creating a tunnel
 
-Create a tunnel for your project with a single command. This will create a Cloudflare tunnel, configure DNS records, set up a Herd link, and save the configuration to `.cloudflared.yaml` in your project root.
+Create a tunnel for your project with a single command. This will create a Cloudflare tunnel, configure DNS records, set up a Valet link, and save the configuration to `.cloudflared.yaml` in your project root.
 
 ```bash
 php artisan cloudflared:install

@@ -1,13 +1,19 @@
 {
-    "name": "aerni/cloudflared",
+    "name": "amdadulhaq/cloudflared",
     "description": "A Laravel package to create and manage Cloudflare Tunnels for local development",
-    "homepage": "https://github.com/aerni/laravel-cloudflared",
+    "homepage": "https://github.com/amdad121/laravel-cloudflared-valet",
     "license": "MIT",
     "authors": [
         {
             "name": "Michael Aerni",
             "email": "hello@michaelaerni.ch",
             "homepage": "https://michaelaerni.ch",
+            "role": "Developer"
+        },
+        {
+            "name": "Amdadul Haq",
+            "email": "amdaddev121@gmail.com",
+            "homepage": "https://amdadulhaq.com",
             "role": "Developer"
         }
     ],
