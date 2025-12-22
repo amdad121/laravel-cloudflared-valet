@@ -15,7 +15,7 @@ Pair it with [Cloudflared for Vite](https://github.com/aerni/vite-plugin-laravel
 Install the package using Composer:
 
 ```bash
-composer require amdadulhaq/cloudflared
+composer require amdadulhaq/cloudflared-valet
 ```
 
 ## Basic Usage
