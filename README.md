@@ -48,12 +48,14 @@ php artisan cloudflared:uninstall
 
 ## License
 
-This package is open-sourced software licensed under the [MIT license](LICENSE.md).
+This package is open-sourced software licensed under the [MIT license](LICENSE).
 
 ## Credits
 
-Developed by [Michael Aerni](https://michaelaerni.ch)
+This package is maintained by [Amdadul Haq](https://amdadulhaq.com).
+
+Originally developed by [Michael Aerni](https://michaelaerni.ch).
 
 ## Support
 
-For issues and questions, please use the [GitHub Issues](https://github.com/aerni/laravel-cloudflared/issues) page.
+For issues and questions, please use the [GitHub Issues](https://github.com/amdad121/laravel-cloudflared-valet/issues) page.
